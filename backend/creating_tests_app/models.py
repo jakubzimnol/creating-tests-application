@@ -12,7 +12,7 @@ class QuestionBase(models.Model):
         return self.question_content
 
     class Meta:
-        ordering = ['user', 'number']
+        ordering = ['number']
 
 
 class OpenQuestion(QuestionBase):
