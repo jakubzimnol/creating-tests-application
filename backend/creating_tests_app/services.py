@@ -49,9 +49,9 @@ answer_serializer = {
 
 def get_full_serialized_question_data_list(queryset_list):
     returning_data = []
-    for question_base in queryset_list:
-        question_object = question_model[question_base.question_type].objects.get(id=question_base.id)
-        serializer = question_serializer[question_base.question_type](question_object)
+    for question in queryset_list:
+        #question_object = question_model[question_base.question_type].objects.get(id=question_base.id)
+        serializer = question_serializer[question.question_type](question)
         returning_data.append(serializer.data)
     return returning_data
 

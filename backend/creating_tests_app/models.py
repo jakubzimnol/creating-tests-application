@@ -1,6 +1,7 @@
 from django.core.validators import MinValueValidator
 from django.db import models
 from rest_framework.compat import MaxValueValidator
+from model_utils.managers import InheritanceManager
 
 
 class QuestionBase(models.Model):
@@ -20,6 +21,7 @@ class QuestionBase(models.Model):
     test = models.ForeignKey('Test', on_delete=models.CASCADE, related_name='questions')
     number = models.IntegerField(validators=[MinValueValidator(1)])
     question_type = models.CharField(max_length=2, choices=QUESTION_TYPE, default=OPEN)
+    objects = InheritanceManager()
 
     def __str__(self):
         return self.question_content
@@ -57,6 +59,7 @@ class AnswerBase(models.Model):
     user = models.ForeignKey('auth.User', on_delete=models.CASCADE, related_name='answers')
     question = models.ForeignKey(QuestionBase, on_delete=models.CASCADE, related_name='answer')
     points = models.FloatField(validators=[MinValueValidator(0), MaxValueValidator(1)], default=0)
+    objects = InheritanceManager()
 
     def check_answer(self):
         if self.answer == self.question.proper_answer:
@@ -80,12 +83,15 @@ class ChoiceAnswer(AnswerBase):
 
 
 class Choice(models.Model):
-    choice_name = models.TextField()
+    name = models.TextField()
     question_options = models.ForeignKey(ChoiceQuestion, on_delete=models.CASCADE, related_name='options')
     question_user_answer = models.ForeignKey(ChoiceAnswer, on_delete=models.CASCADE,
                                              related_name='answer', null=True)
     question_proper_answer = models.ForeignKey(ChoiceQuestion, on_delete=models.CASCADE,
                                                related_name='proper_answer', null=True)
+
+    def __str__(self):
+        return self.name
 
 
 class ScaleAnswer(AnswerBase):

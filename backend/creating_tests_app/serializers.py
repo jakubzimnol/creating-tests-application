@@ -31,7 +31,7 @@ class OpenQuestionModelSerializer(BaseQuestionModelSerializer):
 
 class OptionsSerializer(serializers.ModelSerializer):
     class Meta:
-        fields = ('choice_name', 'question_options')
+        fields = ('name', 'question_options')
         model = Choice
 
 
@@ -57,7 +57,7 @@ class ChoiceQuestionBaseSerializer(BaseQuestionModelSerializer):
         proper_answers_objects = []
         for proper_answer in proper_answers_names:
             proper_answers_objects.append(
-                next(x for x in all_answers if x.choice_name == proper_answer['choice_name']))
+                next(x for x in all_answers if x.name == proper_answer['name']))
         return proper_answers_objects
 
     def set_question_in_options(self, options, question):
