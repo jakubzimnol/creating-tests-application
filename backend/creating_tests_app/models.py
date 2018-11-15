@@ -29,7 +29,6 @@ class QuestionBase(models.Model):
 
 
 class OpenQuestion(QuestionBase):
-    user_answer = models.TextField(null=True)
     proper_answer = models.TextField(null=True)
 
 
@@ -37,21 +36,11 @@ class ChoiceQuestion(QuestionBase):
     one_choice = models.BooleanField(default=False)
 
 
-class Choice(models.Model):
-    choice_name = models.TextField()
-    question_options = models.ForeignKey(ChoiceQuestion, on_delete=models.CASCADE, related_name='options')
-    question_user_answer = models.ForeignKey(ChoiceQuestion, on_delete=models.CASCADE,
-                                             related_name='user_answer', null=True)
-    question_proper_answer = models.ForeignKey(ChoiceQuestion, on_delete=models.CASCADE, related_name='proper_answer')
-
-
-class BoolQuestion(QuestionBase):
-    user_answer = models.BooleanField(null=True)
+class BooleanQuestion(QuestionBase):
     proper_answer = models.BooleanField()
 
 
 class ScaleQuestion(QuestionBase):
-    user_answer = models.IntegerField(validators=[MinValueValidator(1), MaxValueValidator(10)])
     proper_answer = models.IntegerField(validators=[MinValueValidator(1), MaxValueValidator(10)])
 
 
@@ -62,3 +51,48 @@ class Test(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class AnswerBase(models.Model):
+    user = models.ForeignKey('auth.User', on_delete=models.CASCADE, related_name='answers')
+    question = models.ForeignKey(QuestionBase, on_delete=models.CASCADE, related_name='answer')
+    points = models.FloatField(validators=[MinValueValidator(0), MaxValueValidator(1)], default=0)
+
+    def check(self):
+        if self.answer == self.question.proper_answer:
+            self.points = 1
+        else:
+            self.points = 0
+        return self.points
+
+
+class BooleanAnswer(AnswerBase):
+    answer = models.BooleanField
+
+
+class ChoiceAnswer(AnswerBase):
+    def check(self):
+        user_proper_answer_amount = sum([answer in self.question.proper_answer for answer in self.answer])
+        user_bad_answer_amount = sum([answer not in self.question.proper_answer for answer in self.answer])
+        proper_answer_amount = len(self.question.proper_answer)
+        self.points = user_proper_answer_amount/(proper_answer_amount+user_bad_answer_amount*2)
+        return self.points
+
+
+class Choice(models.Model):
+    choice_name = models.TextField()
+    question_options = models.ForeignKey(ChoiceQuestion, on_delete=models.CASCADE, related_name='options')
+    question_user_answer = models.ForeignKey(ChoiceAnswer, on_delete=models.CASCADE,
+                                             related_name='answer', null=True)
+    question_proper_answer = models.ForeignKey(ChoiceQuestion, on_delete=models.CASCADE,
+                                               related_name='proper_answer', null=True)
+
+
+class ScaleAnswer(AnswerBase):
+    answer = models.IntegerField(validators=[MinValueValidator(1), MaxValueValidator(10)])
+
+
+class OpenAnswer(AnswerBase):
+    answer = models.TextField()
+
+
