@@ -1,3 +1,6 @@
+import pdb
+
+from django.contrib.auth.models import User
 from django.shortcuts import get_object_or_404
 from rest_framework import status
 from rest_framework.decorators import action
@@ -5,12 +8,11 @@ from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
 
 from creating_tests_app.models import Test, QuestionBase, OpenQuestion, BooleanQuestion, ChoiceQuestion, ScaleQuestion, \
-    BooleanAnswer, AnswerBase, ScaleAnswer, OpenAnswer, ChoiceAnswer, Choice
+    BooleanAnswer, AnswerBase, ChoiceAnswer
 from creating_tests_app.serializers import TestModelSerializer, QuestionModelSerializer, OpenQuestionModelSerializer, \
     BooleanQuestionModelSerializer, ChoiceOneQuestionModelSerializer, ChoiceMultiQuestionModelSerializer, \
     ScaleQuestionModelSerializer, BooleanAnswerSerializer, OpenAnswerSerializer, ScaleAnswerSerializer, \
-    ChoiceAnswerSerializer, OptionsSerializer, ChoiceOneAnswerSerializer, ChoiceMultiAnswerSerializer
-
+    ChoiceOneAnswerSerializer, ChoiceMultiAnswerSerializer
 # def get_answers_full_data(queryset_list):
 #     returning_data = []
 #     for question_base in queryset_list:
@@ -27,8 +29,8 @@ from creating_tests_app.serializers import TestModelSerializer, QuestionModelSer
 #         serializer = question_serializer[question_base.question_type](data)
 #         returning_data.append(serializer.data)
 #     return returning_data
-from creating_tests_app.services import get_full_serialized_answer_data, get_full_serialized_question_data, \
-    get_full_serialized_answer_data_list, get_full_serialized_question_data_list, get_and_check_serialized_answer_list
+from creating_tests_app.services import get_full_serialized_answer_data, get_full_serialized_answer_data_list, \
+    get_full_serialized_question_data_list, get_and_check_serialized_answer_list, answer_serializer
 
 
 class TestsModelViewSet(ModelViewSet):
@@ -84,7 +86,24 @@ class TestsModelViewSet(ModelViewSet):
 
 class QuestionReadOnlyModelViewSet(ReadOnlyModelViewSet):
     queryset = QuestionBase.objects.all()
-    serializer_class = QuestionModelSerializer
+    #serializer_class = QuestionModelSerializer
+
+    def get_serializer_class(self):
+        if self.action in ['answer', '']:
+            question = QuestionBase.objects.get(id=self.kwargs['pk'])
+            return answer_serializer[question.question_type]
+        return QuestionModelSerializer
+
+    @action(methods=['post',], detail=True, url_path='answer')
+    def answer(self, request, pk):
+        # user = User.objects.get(1)
+        data = request.data
+        # data['user'] = user
+        data['question'] = QuestionBase.objects.get(id=self.kwargs['pk'])
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data, status.HTTP_201_CREATED)
 
 
 class OpenQuestionViewSet(ModelViewSet):
@@ -128,12 +147,13 @@ class ScaleAnswerModelViewSet(ModelViewSet):
 
 
 class ChoiceOneAnswerModelViewSet(ModelViewSet):
-    queryset = BooleanAnswer.objects.all()
+    #pdb.set_trace()
+    # queryset = ChoiceAnswer.objects.filter(question__one_choice=True).all()
     serializer_class = ChoiceOneAnswerSerializer
 
 
 class ChoiceMultiAnswerModelViewSet(ModelViewSet):
-    queryset = BooleanAnswer.objects.all()
+    queryset = ChoiceAnswer.objects.filter().all()
     serializer_class = ChoiceMultiAnswerSerializer
 
 # class ChoiceModelViewSet(ModelViewSet):

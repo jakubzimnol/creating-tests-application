@@ -1,7 +1,7 @@
 from rest_framework import serializers
 
-from creating_tests_app.models import Test, QuestionBase, OpenQuestion, ChoiceQuestion, BooleanQuestion, ScaleQuestion,\
-    BooleanAnswer, OpenAnswer, ScaleAnswer, ChoiceAnswer, Choice
+from creating_tests_app.models import Test, QuestionBase, OpenQuestion, ChoiceQuestion, BooleanQuestion, ScaleQuestion, \
+    BooleanAnswer, OpenAnswer, ScaleAnswer, ChoiceAnswer, Choice, AnswerBase
 
 
 class BaseQuestionModelSerializer(serializers.ModelSerializer):
@@ -22,9 +22,8 @@ class QuestionModelSerializer(serializers.ModelSerializer):
 
 
 class OpenQuestionModelSerializer(BaseQuestionModelSerializer):
-    class Meta:
+    class Meta(BaseQuestionModelSerializer.Meta):
         model = OpenQuestion
-        fields = BaseQuestionModelSerializer.Meta.fields
 
     def create(self, validated_data):
         return self.create_and_set_question_type(validated_data, OpenQuestionModelSerializer, QuestionBase.OPEN)
@@ -51,7 +50,7 @@ class ChoiceQuestionBaseSerializer(BaseQuestionModelSerializer):
 
     def validate(self, data):
         if not all(elem in data['options'] for elem in data['proper_answer']):
-            raise serializers.ValidationError("Proper answer must be in options")
+            raise serializers.ValidationError("Proper answer must be included in options")
         return data
 
     def get_proper_answers(self, proper_answers_names, all_answers):
@@ -106,27 +105,48 @@ class ChoiceMultiQuestionModelSerializer(ChoiceQuestionBaseSerializer):
 
 
 class BooleanQuestionModelSerializer(BaseQuestionModelSerializer):
-    class Meta:
+    class Meta(BaseQuestionModelSerializer.Meta):
         model = BooleanQuestion
-        fields = BaseQuestionModelSerializer.Meta.fields
 
     def create(self, validated_data):
         return self.create_and_set_question_type(validated_data, BooleanQuestionModelSerializer, QuestionBase.BOOL)
 
 
 class ScaleQuestionModelSerializer(BaseQuestionModelSerializer):
-    class Meta:
+    class Meta(BaseQuestionModelSerializer.Meta):
         model = ScaleQuestion
-        fields = BaseQuestionModelSerializer.Meta.fields
 
     def create(self, validated_data):
         return self.create_and_set_question_type(validated_data, ScaleQuestionModelSerializer, QuestionBase.SCALE)
 
 
-class QuestionModelSerializer(serializers.ModelSerializer):
+class BaseQuestionUserModelSerializer(serializers.ModelSerializer):
     class Meta:
-        model = QuestionBase
-        fields = ('question_content', 'test', 'number')
+        fields = ('question_content', 'answer', 'test', 'number')
+        abstract = True
+
+
+class OpenQuestionUserModelSerializer(BaseQuestionUserModelSerializer):
+    class Meta(BaseQuestionUserModelSerializer.Meta):
+        model = OpenQuestion
+
+
+class BooleanQuestionUserModelSerializer(BaseQuestionUserModelSerializer):
+    class Meta(BaseQuestionUserModelSerializer.Meta):
+        model = BooleanQuestion
+
+
+class ScaleQuestionUserModelSerializer(BaseQuestionUserModelSerializer):
+    class Meta(BaseQuestionUserModelSerializer.Meta):
+        model = ScaleQuestion
+
+
+class ChoiceQuestionUserBaseSerializer(BaseQuestionUserModelSerializer):
+    options = OptionsQuestionSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = ChoiceQuestion
+        fields = ('question_content', 'options', 'answer', 'number', 'test')
 
 
 class TestModelSerializer(serializers.ModelSerializer):
@@ -137,28 +157,30 @@ class TestModelSerializer(serializers.ModelSerializer):
         fields = ('name', 'description', 'questions')
 
 
-class BooleanAnswerSerializer(serializers.ModelSerializer):
+class BaseAnswerSerializer(serializers.ModelSerializer):
     class Meta:
+        model = AnswerBase
+        fields = ('answer', 'question', 'user')
+
+
+class BooleanAnswerSerializer(BaseAnswerSerializer):
+    class Meta(BaseAnswerSerializer.Meta):
         model = BooleanAnswer
-        fields = '__all__'
 
 
-class OpenAnswerSerializer(serializers.ModelSerializer):
-    class Meta:
+class OpenAnswerSerializer(BaseAnswerSerializer):
+    class Meta(BaseAnswerSerializer.Meta):
         model = OpenAnswer
-        fields = '__all__'
 
 
-class ScaleAnswerSerializer(serializers.ModelSerializer):
-    class Meta:
+class ScaleAnswerSerializer(BaseAnswerSerializer):
+    class Meta(BaseAnswerSerializer.Meta):
         model = ScaleAnswer
-        fields = '__all__'
 
 
-class ChoiceOneAnswerSerializer(serializers.ModelSerializer):
-    class Meta:
+class ChoiceOneAnswerSerializer(BaseAnswerSerializer):
+    class Meta(BaseAnswerSerializer.Meta):
         model = ChoiceAnswer
-        fields = '__all__'
 
     def validate_answer(self, value):
         if len(value) > 1:
@@ -166,10 +188,9 @@ class ChoiceOneAnswerSerializer(serializers.ModelSerializer):
         return value
 
 
-class ChoiceMultiAnswerSerializer(serializers.ModelSerializer):
-    class Meta:
+class ChoiceMultiAnswerSerializer(BaseAnswerSerializer):
+    class Meta(BaseAnswerSerializer.Meta):
         model = ChoiceAnswer
-        fields = '__all__'
 
     def validate_answer(self, value):
         if len(value) == 1:

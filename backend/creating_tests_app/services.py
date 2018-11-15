@@ -3,7 +3,8 @@ from creating_tests_app.models import QuestionBase, OpenQuestion, BooleanQuestio
 from creating_tests_app.serializers import OpenQuestionModelSerializer, BooleanQuestionModelSerializer, \
     ChoiceOneQuestionModelSerializer, ChoiceMultiQuestionModelSerializer, ScaleQuestionModelSerializer, \
     BooleanAnswerSerializer, OpenAnswerSerializer, ScaleAnswerSerializer, ChoiceOneAnswerSerializer, \
-    ChoiceMultiAnswerSerializer
+    ChoiceMultiAnswerSerializer, BooleanQuestionUserModelSerializer, ScaleQuestionUserModelSerializer, \
+    OpenQuestionUserModelSerializer, ChoiceQuestionUserBaseSerializer
 
 question_serializer = {
     QuestionBase.BOOL: BooleanQuestionModelSerializer,
@@ -11,6 +12,14 @@ question_serializer = {
     QuestionBase.OPEN: OpenQuestionModelSerializer,
     QuestionBase.CHOICE_ONE: ChoiceOneQuestionModelSerializer,
     QuestionBase.CHOICE_MULTI: ChoiceMultiQuestionModelSerializer,
+}
+
+question_user_serializer = {
+    QuestionBase.BOOL: BooleanQuestionUserModelSerializer,
+    QuestionBase.SCALE: ScaleQuestionUserModelSerializer,
+    QuestionBase.OPEN: OpenQuestionUserModelSerializer,
+    QuestionBase.CHOICE_ONE: ChoiceQuestionUserBaseSerializer,
+    QuestionBase.CHOICE_MULTI: ChoiceQuestionUserBaseSerializer,
 }
 
 question_model = {
@@ -60,7 +69,7 @@ def get_and_check_serialized_answer_list(queryset_list):
     returning_data = []
     for answer_base in queryset_list:
         answer_object = answer_model[answer_base.question.question_type].objects.get(id=answer_base.id)
-        answer_object.check()
+        answer_object.check_answer()
         serializer = answer_serializer[answer_base.question.question_type](answer_object)
         returning_data.append(serializer.data)
     return returning_data

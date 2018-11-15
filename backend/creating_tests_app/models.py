@@ -58,7 +58,7 @@ class AnswerBase(models.Model):
     question = models.ForeignKey(QuestionBase, on_delete=models.CASCADE, related_name='answer')
     points = models.FloatField(validators=[MinValueValidator(0), MaxValueValidator(1)], default=0)
 
-    def check(self):
+    def check_answer(self):
         if self.answer == self.question.proper_answer:
             self.points = 1
         else:
@@ -71,7 +71,7 @@ class BooleanAnswer(AnswerBase):
 
 
 class ChoiceAnswer(AnswerBase):
-    def check(self):
+    def check_answer(self):
         user_proper_answer_amount = sum([answer in self.question.proper_answer for answer in self.answer])
         user_bad_answer_amount = sum([answer not in self.question.proper_answer for answer in self.answer])
         proper_answer_amount = len(self.question.proper_answer)
@@ -94,5 +94,3 @@ class ScaleAnswer(AnswerBase):
 
 class OpenAnswer(AnswerBase):
     answer = models.TextField()
-
-
