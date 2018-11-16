@@ -1,5 +1,10 @@
+import copy
+
+from requests import Response
+from rest_framework import status
+
 from creating_tests_app.models import QuestionBase, OpenQuestion, BooleanQuestion, ChoiceQuestion, ScaleQuestion, \
-    BooleanAnswer, ScaleAnswer, OpenAnswer, ChoiceAnswer
+    BooleanAnswer, ScaleAnswer, OpenAnswer, ChoiceAnswer, Test
 from creating_tests_app.serializers import OpenQuestionModelSerializer, BooleanQuestionModelSerializer, \
     ChoiceOneQuestionModelSerializer, ChoiceMultiQuestionModelSerializer, ScaleQuestionModelSerializer, \
     BooleanAnswerSerializer, OpenAnswerSerializer, ScaleAnswerSerializer, ChoiceOneAnswerSerializer, \
@@ -22,21 +27,21 @@ question_user_serializer = {
     QuestionBase.CHOICE_MULTI: ChoiceQuestionUserBaseSerializer,
 }
 
-question_model = {
-    QuestionBase.BOOL: BooleanQuestion,
-    QuestionBase.SCALE: ScaleQuestion,
-    QuestionBase.OPEN: OpenQuestion,
-    QuestionBase.CHOICE_ONE: ChoiceQuestion,
-    QuestionBase.CHOICE_MULTI: ChoiceQuestion,
-}
+# question_model = {
+#     QuestionBase.BOOL: BooleanQuestion,
+#     QuestionBase.SCALE: ScaleQuestion,
+#     QuestionBase.OPEN: OpenQuestion,
+#     QuestionBase.CHOICE_ONE: ChoiceQuestion,
+#     QuestionBase.CHOICE_MULTI: ChoiceQuestion,
+# }
 
-answer_model = {
-    QuestionBase.BOOL: BooleanAnswer,
-    QuestionBase.SCALE: ScaleAnswer,
-    QuestionBase.OPEN: OpenAnswer,
-    QuestionBase.CHOICE_ONE: ChoiceAnswer,
-    QuestionBase.CHOICE_MULTI: ChoiceAnswer,
-}
+# answer_model = {
+#     QuestionBase.BOOL: BooleanAnswer,
+#     QuestionBase.SCALE: ScaleAnswer,
+#     QuestionBase.OPEN: OpenAnswer,
+#     QuestionBase.CHOICE_ONE: ChoiceAnswer,
+#     QuestionBase.CHOICE_MULTI: ChoiceAnswer,
+# }
 
 answer_serializer = {
     QuestionBase.BOOL: BooleanAnswerSerializer,
@@ -47,10 +52,18 @@ answer_serializer = {
 }
 
 
+def create_question(self, request, **kwargs):
+        data = request.data.copy()
+        data['test'] = kwargs['test_id']
+        serializer = self.get_serializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data, status.HTTP_201_CREATED)
+
+
 def get_full_serialized_question_data_list(queryset_list):
     returning_data = []
     for question in queryset_list:
-        #question_object = question_model[question_base.question_type].objects.get(id=question_base.id)
         serializer = question_serializer[question.question_type](question)
         returning_data.append(serializer.data)
     return returning_data
@@ -58,30 +71,26 @@ def get_full_serialized_question_data_list(queryset_list):
 
 def get_full_serialized_answer_data_list(queryset_list):
     returning_data = []
-    for answer_base in queryset_list:
-        answer_object = answer_model[answer_base.question.question_type].objects.get(id=answer_base.id)
-        serializer = answer_serializer[answer_base.question.question_type](answer_object)
+    for answer in queryset_list:
+        serializer = answer_serializer[answer.question.question_type](answer)
         returning_data.append(serializer.data)
     return returning_data
 
 
 def get_and_check_serialized_answer_list(queryset_list):
     returning_data = []
-    for answer_base in queryset_list:
-        answer_object = answer_model[answer_base.question.question_type].objects.get(id=answer_base.id)
-        answer_object.check_answer()
-        serializer = answer_serializer[answer_base.question.question_type](answer_object)
+    for answer in queryset_list:
+        answer.check_answer()
+        serializer = answer_serializer[answer.question.question_type](answer)
         returning_data.append(serializer.data)
     return returning_data
 
 
 def get_full_serialized_question_data(queryset):
-    data = question_model[queryset.question_type].objects.get(id=queryset.id)
-    serializer = question_serializer[queryset.question_type](data)
+    serializer = question_serializer[queryset.question_type](queryset)
     return serializer.data
 
 
 def get_full_serialized_answer_data(queryset):
-    data = answer_model[queryset.question.question_type].objects.get(id=queryset.id)
     serializer = answer_serializer[queryset.question_type](data)
     return serializer.data

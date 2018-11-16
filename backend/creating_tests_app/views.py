@@ -7,26 +7,9 @@ from rest_framework.viewsets import ModelViewSet, ReadOnlyModelViewSet
 from creating_tests_app.models import Test, QuestionBase, AnswerBase
 from creating_tests_app.serializers import TestModelSerializer, QuestionModelSerializer, OpenQuestionModelSerializer, \
     BooleanQuestionModelSerializer, ChoiceOneQuestionModelSerializer, ChoiceMultiQuestionModelSerializer, \
-    ScaleQuestionModelSerializer, BooleanAnswerSerializer
-# def get_answers_full_data(queryset_list):
-#     returning_data = []
-#     for question_base in queryset_list:
-#         data = question_model[question_base.question_type].objects.get(id=question_base.id)
-#         serializer = question_serializer[question_base.question_type](data)
-#         returning_data.append(serializer.data)
-#     return returning_data
-#
-#
-# def get_questions_full_data(queryset_list):
-#     returning_data = []
-#     for question_base in queryset_list:
-#         data = question_model[question_base.question_type].objects.get(id=question_base.id)
-#         serializer = question_serializer[question_base.question_type](data)
-#         returning_data.append(serializer.data)
-#     return returning_data
-from creating_tests_app.services import get_full_serialized_answer_data, get_full_serialized_answer_data_list, \
-    get_full_serialized_question_data_list, get_and_check_serialized_answer_list, answer_serializer, \
-    question_user_serializer
+    ScaleQuestionModelSerializer
+from creating_tests_app.services import get_full_serialized_question_data_list, get_and_check_serialized_answer_list, \
+    answer_serializer, question_user_serializer, get_full_serialized_answer_data_list, create_question
 
 
 class TestsModelViewSet(ModelViewSet):
@@ -57,96 +40,135 @@ class TestsModelViewSet(ModelViewSet):
 
     @action(methods=['get'], detail=True, url_path='answers')
     def get_answers(self, request, pk):
-        queryset = AnswerBase.objects.filter(question__test=pk).all()
+        queryset = AnswerBase.objects.filter(question__test=pk).select_subclasses()
         data = get_full_serialized_answer_data_list(queryset)
         return Response(data, status.HTTP_200_OK)
 
-    @action(methods=['get'], detail=True, url_path='answers/(?P<number>[^/.]+)')
-    def get_answers_detailed(self, request, pk, number):
-        object = get_object_or_404(AnswerBase, question__test=pk, question__number=number)
-        data = get_full_serialized_answer_data(object)
-        return Response(data, status.HTTP_200_OK)
+    # @action(methods=['get'], detail=True, url_path='answers/(?P<number>[^/.]+)')
+    # def get_answers_detailed(self, request, pk, number):
+    #     object = get_object_or_404(AnswerBase, question__test=pk, question__number=number)
+    #     data = get_full_serialized_answer_data(object)
+    #     return Response(data, status.HTTP_200_OK)
 
     @action(methods=['post'], detail=True)
-    def check(self, request, pk, number):
-        queryset = AnswerBase.objects.filter(question__test=pk).all()
+    def check(self, request, pk):
+        queryset = AnswerBase.objects.filter(question__test=pk).all().select_subclasses()
         user_answers_serialized = get_and_check_serialized_answer_list(queryset)
         return Response(user_answers_serialized, status.HTTP_200_OK)
 
     @action(methods=['post'], detail=True, url_path='send-email')
     def send_email(self, request, pk, number):
-        object = get_object_or_404(AnswerBase, question__test=pk, question__number=number)
-        data = get_full_serialized_answer_data(object)
-        return Response(data, status.HTTP_200_OK)
+        pass
 
 
 class QuestionReadOnlyModelViewSet(ReadOnlyModelViewSet):
     def get_queryset(self):
-        if self.action in ['answer', ]:
-            question = QuestionBase.objects.get(id=self.kwargs['pk'])
-            return question.answer
-        elif self.action in ['retrieve', ]:
-            return QuestionBase.objects.get(id=self.kwargs['pk]']).select_subclasses()
-        elif self.action in ['list', ]:
+        # if self.action in ['answer', ]:
+        #     question = QuestionBase.objects.get_subclass(id=self.kwargs['pk'])
+        #     return question.answer
+        if self.action in ['list', 'retrieve']:
             return QuestionBase.objects.filter(test=self.kwargs['test_id']).select_subclasses()
 
     def get_serializer_class(self):
         question = QuestionBase.objects.get(id=self.kwargs['pk'])
-        if self.action in ['answer', '']:
+        if self.action in ['answer', ]:
             return answer_serializer[question.question_type]
-        elif self.action in ['retrieve']:
+        elif self.action in ['retrieve', ]:
             return question_user_serializer[question.question_type]
-        # raise NotImplementedError()
 
     def list(self, request, *args, **kwargs):
         queryset = self.get_queryset()
         data = get_full_serialized_question_data_list(queryset)
         return Response(data, status.HTTP_200_OK)
 
-    @action(methods=['post', ], detail=True, url_path='answer')
-    def answer(self, request, pk):
-        # user = User.objects.get(1)
-        data = request.data
-        # data['user'] = user
-        data['question'] = QuestionBase.objects.get(id=self.kwargs['pk'])
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response(serializer.data, status.HTTP_201_CREATED)
+    # @action(methods=['post', ], detail=True, url_path='answer')
+    # def answer(self, request, test_id, pk):
+    #     # user = User.objects.get(1)
+    #     data = request.data
+    #     # data['user'] = user
+    #     data['question'] = QuestionBase.objects.get(id=self.kwargs['pk'])
+    #     serializer = self.get_serializer(data=request.data)
+    #     serializer.is_valid(raise_exception=True)
+    #     serializer.save()
+    #     return Response(serializer.data, status.HTTP_201_CREATED)
+
+    # @action(methods=['post', ], detail=False,)
+    # def open(self, request, test_id):
+    #     data = request['data'].copy()
+    #     data['test'] = Test.objects.get(id=test_id)
+    #     serializer = self.get_serializer(data=data)
+    #     serializer.is_valid()
 
 
 class OpenQuestionCreateViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
+    def create(self, request, *args, **kwargs):
+        return create_question(self, request, **kwargs)
+
     serializer_class = OpenQuestionModelSerializer
 
 
 class BooleanQuestionCreateViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
+    def create(self, request, *args, **kwargs):
+        return create_question(self, request, **kwargs)
+
     serializer_class = BooleanQuestionModelSerializer
 
 
 class ChoiceOneQuestionCreateViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
+    def create(self, request, *args, **kwargs):
+        return create_question(self, request, **kwargs)
+
     serializer_class = ChoiceOneQuestionModelSerializer
 
 
-class ScaleQuestionCreateViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
-    serializer_class = ScaleQuestionModelSerializer
-
-
 class ChoiceMultiQuestionCreateViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
+    def create(self, request, *args, **kwargs):
+        return create_question(self, request, **kwargs)
+
     serializer_class = ChoiceMultiQuestionModelSerializer
 
 
-class BooleanAnswerCreateViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
-    serializer_class = BooleanAnswerSerializer
+class ScaleQuestionCreateViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
+    def create(self, request, *args, **kwargs):
+        return create_question(self, request, **kwargs)
+
+    serializer_class = ScaleQuestionModelSerializer
 
 
-class AnswerCreateRetrieveUpdateDestroyViewSet(mixins.CreateModelMixin,
-                                               mixins.RetrieveModelMixin,
-                                               mixins.UpdateModelMixin,
-                                               mixins.DestroyModelMixin,
-                                               viewsets.GenericViewSet):
+class AnswerModelViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
+    def create(self, request, *args, **kwargs):
+        data = request.data.copy()
+        data['user'] = request.user.id
+        data['question'] = kwargs['question_id']
+        serializer = self.get_serializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data, status.HTTP_201_CREATED)
+
+    def put(self, request, *args, **kwargs):
+        partial = kwargs.pop('partial', False)
+        instance = get_object_or_404(self.get_queryset())
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
+
+    def patch(self, request, *args, **kwargs):
+        return self.put(request, *args, **kwargs)
+
+    def get(self, request, *args, **kwargs):
+        instance = get_object_or_404(self.get_queryset())
+        serializer = self.get_serializer(instance)
+        return Response(serializer.data)
+
+    def delete(self, request, *args, **kwargs):
+        instance = get_object_or_404(self.get_queryset())
+        if instance is not None:
+            instance.delete()
+        return Response(status=status.HTTP_204_NO_CONTENT)
+
     def get_queryset(self):
-        if self.action in ['retrieve']:
-            return AnswerBase.objects.get(id=self.kwargs['pk']).select_subclasses()
+        return AnswerBase.objects.filter(question=self.kwargs['question_id']).select_subclasses()
 
     def get_serializer_class(self):
         question = QuestionBase.objects.get(id=self.kwargs['question_id'])

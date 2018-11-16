@@ -160,7 +160,8 @@ class TestModelSerializer(serializers.ModelSerializer):
 class BaseAnswerSerializer(serializers.ModelSerializer):
     class Meta:
         model = AnswerBase
-        fields = ('answer', 'question', 'user')
+        fields = ('answer', 'question', 'user', 'points')
+        read_only_fields = ('points', )
 
 
 class BooleanAnswerSerializer(BaseAnswerSerializer):
