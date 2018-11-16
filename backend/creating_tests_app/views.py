@@ -36,8 +36,18 @@ class TestsModelViewSet(ModelViewSet):
         data = get_full_serialized_answer_data_list(queryset)
         return Response(data, status.HTTP_200_OK)
 
+    @action(methods=['post'], detail=True, url_path='approve-answers')
+    def approve_answers(self, request, pk):
+        test = Test.objects.get(id=pk)
+        test.user_answered.add(request.user)
+
+        return Response('', status.HTTP_200_OK)
+
     @action(methods=['post'], detail=True)
     def check(self, request, pk):
+        test = Test.objects.get(id=pk)
+        if request.user not in test.user_answered:
+            return Response("You must approve answers first", status.HTTP_403_FORBIDDEN)
         queryset = AnswerBase.objects.filter(question__test=pk).all().select_subclasses()
         user_answers_serialized = get_and_check_serialized_answer_list(queryset)
         return Response(user_answers_serialized, status.HTTP_200_OK)
@@ -49,26 +59,34 @@ class TestsModelViewSet(ModelViewSet):
 
 class QuestionReadOnlyModelViewSet(mixins.RetrieveModelMixin, mixins.DestroyModelMixin,
                                    mixins.UpdateModelMixin, viewsets.GenericViewSet):
-
     def get_permissions(self):
-        if self.action in ['retrieve', 'list']:
-            permission_classes = [IsAuthenticated]
-        elif self.action in ['update', 'partial_update', 'destroy']:
+        permission_classes = [IsAuthenticated]
+        if self.action in ['update', 'partial_update', 'destroy', 'answers']:
             permission_classes = [permission_or(IsTestOwner, IsAdmin)]
         return [permission() for permission in permission_classes]
 
     def get_queryset(self):
         if self.action in ['list', 'retrieve']:
             return QuestionBase.objects.filter(test=self.kwargs['test_id']).select_subclasses()
+        elif self.action in ['answers', ]:
+            return AnswerBase.objects.filter(question=self.kwargs['question_id']).select_subclasses()
 
     def get_serializer_class(self):
         question = QuestionBase.objects.get(id=self.kwargs['pk'])
-        if self.action in ['retrieve', ]:
+        if self.action in ['retrieve', 'destroy', 'update', 'partial_update']:
             return question_user_serializer[question.question_type]
 
     def list(self, request, *args, **kwargs):
         queryset = self.get_queryset()
         data = get_full_serialized_question_data_list(queryset)
+        return Response(data, status.HTTP_200_OK)
+
+
+class UserTestViewSet(viewsets.ModelViewSet):
+    @action(methods=['list', ], detail=True)
+    def answers(self, request, args, **kwargs):
+        queryset = self.get_queryset()
+        data = get_full_serialized_answer_data_list(queryset)
         return Response(data, status.HTTP_200_OK)
 
 
@@ -118,7 +136,12 @@ class ScaleQuestionCreateViewSet(mixins.CreateModelMixin, viewsets.GenericViewSe
 
 
 class AnswerModelViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
-    permission_classes = [IsAuthenticated]
+    def get_permissions(self):
+        permission_classes = [IsAuthenticated]
+        test = Test.objects.get(id=self.kwargs['test_id'])
+        if self.request.user in test.user_answered:
+            permission_classes = [ReadOnly, ]
+        return [permission() for permission in permission_classes]
 
     def create(self, request, *args, **kwargs):
         if self.get_queryset():
