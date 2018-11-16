@@ -1,3 +1,8 @@
+from django.contrib.auth.models import User
+from django.core.mail import EmailMultiAlternatives
+from django.shortcuts import get_object_or_404
+from django.template.loader import render_to_string
+from django.utils.html import strip_tags
 from rest_framework import serializers
 
 from creating_tests_app.models import Test, QuestionBase, OpenQuestion, ChoiceQuestion, BooleanQuestion, ScaleQuestion, \
@@ -197,3 +202,38 @@ class ChoiceMultiAnswerSerializer(BaseAnswerSerializer):
         if len(value) == 1:
             raise serializers.ValidationError("ChoiceMultiQuestion has more than one proper answer")
         return value
+
+class EmailSerializer(serializers.Serializer):
+    test_id = serializers.IntegerField()
+    user_id = serializers.IntegerField()
+
+    def get_data_from_db(self, validated_data):
+        test_id = validated_data['test_id']
+        user_id = validated_data['user_id']
+        test = get_object_or_404(Test, id=test_id)
+        user = get_object_or_404(User, id=user_id)
+        answers = AnswerBase.objects.filter(question__test=test_id, user=user_id)
+        return user, answers, test
+
+    def generate_mail_message(self, user, answers, test):
+        context = {'answers': answers, 'user': user, 'test': test}
+        subject, from_email = 'Exam results', 'pythoninventorizationproject@gmail.com'
+        to = user.email
+        html_content = render_to_string('email.html', context)
+        text_content = strip_tags(html_content)
+        msg = EmailMultiAlternatives(subject, text_content, from_email, [to])
+        return msg, html_content
+
+    def send_mail(self, validated_data):
+        user, answers, test = self.get_data_from_db(validated_data)
+        msg, html_content = self.generate_mail_message(user, answers, test)
+        msg.attach_alternative(html_content, "text/html")
+        msg.send()
+
+    def create(self, validated_data):
+        self.send_mail(validated_data)
+        return validated_data
+
+    def update(self, instance, validated_data):
+        self.send_mail(validated_data)
+        return validated_data

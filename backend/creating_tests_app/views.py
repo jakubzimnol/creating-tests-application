@@ -9,7 +9,7 @@ from creating_tests_app.models import Test, QuestionBase, AnswerBase
 from creating_tests_app.permissions import permission_or, IsOwner, IsAdmin, ReadOnly, IsTestOwner
 from creating_tests_app.serializers import TestModelSerializer, OpenQuestionModelSerializer, \
     BooleanQuestionModelSerializer, ChoiceOneQuestionModelSerializer, ChoiceMultiQuestionModelSerializer, \
-    ScaleQuestionModelSerializer
+    ScaleQuestionModelSerializer, EmailSerializer
 from creating_tests_app.services import get_full_serialized_question_data_list, get_and_check_serialized_answer_list, \
     answer_serializer, question_user_serializer, get_full_serialized_answer_data_list, create_question
 
@@ -19,7 +19,7 @@ class TestsModelViewSet(ModelViewSet):
         return Test.objects.all()
 
     def get_permissions(self):
-        if self.action in ['create', 'check', 'answers', 'send_email']:
+        if self.action in ['create', 'automated_check', 'answers', 'send_email']:
             permission_classes = [IsAuthenticated]
         elif self.action in ['update', 'partial_update', 'destroy']:
             permission_classes = [permission_or(IsOwner, IsAdmin)]
@@ -28,6 +28,8 @@ class TestsModelViewSet(ModelViewSet):
         return [permission() for permission in permission_classes]
 
     def get_serializer_class(self):
+        if self.action in ['send_email', ]:
+            return EmailSerializer
         return TestModelSerializer
 
     @action(methods=['get'], detail=True, url_path='answers')
@@ -40,10 +42,18 @@ class TestsModelViewSet(ModelViewSet):
     def approve_answers(self, request, pk):
         test = Test.objects.get(id=pk)
         test.user_answered.add(request.user)
-
         return Response('', status.HTTP_200_OK)
 
-    @action(methods=['post'], detail=True)
+    @action(methods=['post'], detail=True, url_path='automated-check')
+    def automated_check(self, request, pk):
+        test = Test.objects.get(id=pk)
+        if request.user not in test.user_answered:
+            return Response("You must approve answers first", status.HTTP_403_FORBIDDEN)
+        queryset = AnswerBase.objects.filter(question__test=pk).all().select_subclasses()
+        user_answers_serialized = get_and_check_serialized_answer_list(queryset)
+        return Response(user_answers_serialized, status.HTTP_200_OK)
+
+    @action(methods=['post'], detail=True, url_path='check')
     def check(self, request, pk):
         test = Test.objects.get(id=pk)
         if request.user not in test.user_answered:
@@ -53,8 +63,12 @@ class TestsModelViewSet(ModelViewSet):
         return Response(user_answers_serialized, status.HTTP_200_OK)
 
     @action(methods=['post'], detail=True, url_path='send-email')
-    def send_email(self, request, pk, number):
-        pass
+    def send_email(self, request, pk):
+        data = {'user_id': request.user.id, 'test_id': pk}
+        serializer = EmailSerializer(data=data)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data, status.HTTP_200_OK)
 
 
 class QuestionReadOnlyModelViewSet(mixins.RetrieveModelMixin, mixins.DestroyModelMixin,
@@ -139,7 +153,7 @@ class AnswerModelViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
     def get_permissions(self):
         permission_classes = [IsAuthenticated]
         test = Test.objects.get(id=self.kwargs['test_id'])
-        if self.request.user in test.user_answered:
+        if self.request.user in test.user_answered.all():
             permission_classes = [ReadOnly, ]
         return [permission() for permission in permission_classes]
 
