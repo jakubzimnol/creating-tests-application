@@ -10,26 +10,26 @@ router = DefaultRouter()
 
 router.register('tests',
                 TestsModelViewSet,
-                base_name='Tests')
+                base_name='tests')
 router.register('tests/(?P<test_id>[^/.]+)/questions/open',
                 OpenQuestionCreateViewSet,
-                base_name='OpenQuestion')
+                base_name='open_question')
 router.register('tests/(?P<test_id>[^/.]+)/questions/choice_one',
                 ChoiceOneQuestionCreateViewSet,
-                base_name='ChoiceOneQuestion')
+                base_name='choice_one_question')
 router.register('tests/(?P<test_id>[^/.]+)/questions/choice_multi',
                 ChoiceMultiQuestionCreateViewSet,
-                base_name='ChoiceMultiQuestion')
+                base_name='choice_multi_question')
 router.register('tests/(?P<test_id>[^/.]+)/questions/boolean',
                 BooleanQuestionCreateViewSet,
-                base_name='BooleanQuestion')
+                base_name='boolean_question')
 router.register('tests/(?P<test_id>[^/.]+)/questions/scale',
                 ScaleQuestionCreateViewSet,
-                base_name='ScaleQuestion')
+                base_name='scale_question')
 router.register('tests/(?P<test_id>[^/.]+)/questions',
                 QuestionReadOnlyModelViewSet,
-                base_name='Questions')
+                base_name='questions')
 router.register('tests/(?P<test_id>[^/.]+)/questions/(?P<question_id>[^/.]+)/answer',
                 AnswerModelViewSet,
-                base_name='Answer')
+                base_name='answer')
 urlpatterns = router.urls
