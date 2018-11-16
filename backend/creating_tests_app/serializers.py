@@ -203,6 +203,14 @@ class ChoiceMultiAnswerSerializer(BaseAnswerSerializer):
             raise serializers.ValidationError("ChoiceMultiQuestion has more than one proper answer")
         return value
 
+
+class CheckAnswerSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = AnswerBase
+        fields = ('question', 'user', 'points')
+        read_only_fields = ('question', 'user')
+
+
 class EmailSerializer(serializers.Serializer):
     test_id = serializers.IntegerField()
     user_id = serializers.IntegerField()

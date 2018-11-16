@@ -6,10 +6,10 @@ from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
 
 from creating_tests_app.models import Test, QuestionBase, AnswerBase
-from creating_tests_app.permissions import permission_or, IsOwner, IsAdmin, ReadOnly, IsTestOwner
+from creating_tests_app.permissions import permission_or, IsOwner, IsAdmin, ReadOnly, IsTestOwner, IsQuestionTestOwner
 from creating_tests_app.serializers import TestModelSerializer, OpenQuestionModelSerializer, \
     BooleanQuestionModelSerializer, ChoiceOneQuestionModelSerializer, ChoiceMultiQuestionModelSerializer, \
-    ScaleQuestionModelSerializer, EmailSerializer
+    ScaleQuestionModelSerializer, EmailSerializer, CheckAnswerSerializer
 from creating_tests_app.services import get_full_serialized_question_data_list, get_and_check_serialized_answer_list, \
     answer_serializer, question_user_serializer, get_full_serialized_answer_data_list, create_question
 
@@ -46,15 +46,6 @@ class TestsModelViewSet(ModelViewSet):
 
     @action(methods=['post'], detail=True, url_path='automated-check')
     def automated_check(self, request, pk):
-        test = Test.objects.get(id=pk)
-        if request.user not in test.user_answered:
-            return Response("You must approve answers first", status.HTTP_403_FORBIDDEN)
-        queryset = AnswerBase.objects.filter(question__test=pk).all().select_subclasses()
-        user_answers_serialized = get_and_check_serialized_answer_list(queryset)
-        return Response(user_answers_serialized, status.HTTP_200_OK)
-
-    @action(methods=['post'], detail=True, url_path='check')
-    def check(self, request, pk):
         test = Test.objects.get(id=pk)
         if request.user not in test.user_answered:
             return Response("You must approve answers first", status.HTTP_403_FORBIDDEN)
@@ -155,7 +146,19 @@ class AnswerModelViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
         test = Test.objects.get(id=self.kwargs['test_id'])
         if self.request.user in test.user_answered.all():
             permission_classes = [ReadOnly, ]
+        if self.action in ['check']:
+            permission_classes = [IsQuestionTestOwner, ]
         return [permission() for permission in permission_classes]
+
+    def get_serializer_class(self):
+        if self.action in ['check']:
+            return CheckAnswerSerializer
+        question = QuestionBase.objects.get(id=self.kwargs['question_id'])
+        return answer_serializer[question.question_type]
+
+    def get_queryset(self):
+        return AnswerBase.objects.filter(question=self.kwargs['question_id'],
+                                         user=self.request.user.id).select_subclasses()
 
     def create(self, request, *args, **kwargs):
         if self.get_queryset():
@@ -185,15 +188,19 @@ class AnswerModelViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
         return Response(serializer.data)
 
     def delete(self, request, *args, **kwargs):
-        instance = get_object_or_404(self.get_queryset())
+        instance = get_object_or_404(self.get_queryset(), id=65874)
         if instance is not None:
             instance.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
 
-    def get_queryset(self):
-        return AnswerBase.objects.filter(question=self.kwargs['question_id'],
-                                         user=self.request.user.id).select_subclasses()
-
-    def get_serializer_class(self):
-        question = QuestionBase.objects.get(id=self.kwargs['question_id'])
-        return answer_serializer[question.question_type]
+    @action(methods=['put'], detail=False, url_path='check')
+    def check(self, request, *args, **kwargs):
+        test = Test.objects.get(id=kwargs['test_id'])
+        if request.user not in test.user_answered.all():
+            return Response("Answers must be approved first", status.HTTP_403_FORBIDDEN)
+        partial = kwargs.pop('partial', False)
+        instance = get_object_or_404(self.get_queryset())
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
