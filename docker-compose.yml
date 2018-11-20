@@ -1,0 +1,27 @@
+version: '3'
+
+services:
+  backend:
+    build: ./backend
+    depends_on:
+      - db
+    env_file:
+      - .env
+    container_name: backend
+
+  nginx:
+    depends_on:
+      - backend
+    ports:
+      - ${NGINX_PORTS}
+    volumes:
+      - static-files:/static
+    container_name: nginx
+
+  db:
+    image: postgres
+    env_file:
+      - .env
+
+volumes:
+  static-files:
