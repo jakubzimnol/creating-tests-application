@@ -62,8 +62,8 @@ class TestsModelViewSet(ModelViewSet):
         return Response(serializer.data, status.HTTP_200_OK)
 
 
-class QuestionReadOnlyModelViewSet(mixins.RetrieveModelMixin, mixins.DestroyModelMixin,
-                                   mixins.UpdateModelMixin, viewsets.GenericViewSet):
+class QuestionMixinGenericViewSet(mixins.RetrieveModelMixin, mixins.DestroyModelMixin,
+                                  mixins.UpdateModelMixin, viewsets.GenericViewSet):
     def get_permissions(self):
         permission_classes = [IsAuthenticated]
         if self.action in ['update', 'partial_update', 'destroy', 'answers']:
@@ -71,10 +71,9 @@ class QuestionReadOnlyModelViewSet(mixins.RetrieveModelMixin, mixins.DestroyMode
         return [permission() for permission in permission_classes]
 
     def get_queryset(self):
-        if self.action in ['list', 'retrieve']:
-            return QuestionBase.objects.filter(test=self.kwargs['test_id']).select_subclasses()
-        elif self.action in ['answers', ]:
+        if self.action in ['answers', ]:
             return AnswerBase.objects.filter(question=self.kwargs['question_id']).select_subclasses()
+        return QuestionBase.objects.filter(test=self.kwargs['test_id']).select_subclasses()
 
     def get_serializer_class(self):
         question = QuestionBase.objects.get(id=self.kwargs['pk'])
@@ -99,7 +98,7 @@ class OpenQuestionCreateViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet
     permission_classes = [IsTestOwner, ]
 
     def create(self, request, *args, **kwargs):
-        return create_question(self, request, **kwargs)
+        return create_question(self, request, *args, **kwargs)
 
     serializer_class = OpenQuestionModelSerializer
 
@@ -108,7 +107,7 @@ class BooleanQuestionCreateViewSet(mixins.CreateModelMixin, viewsets.GenericView
     permission_classes = [IsTestOwner, ]
 
     def create(self, request, *args, **kwargs):
-        return create_question(self, request, **kwargs)
+        return create_question(self, request, *args, **kwargs)
 
     serializer_class = BooleanQuestionModelSerializer
 
@@ -117,7 +116,7 @@ class ChoiceOneQuestionCreateViewSet(mixins.CreateModelMixin, viewsets.GenericVi
     permission_classes = [IsTestOwner, ]
 
     def create(self, request, *args, **kwargs):
-        return create_question(self, request, **kwargs)
+        return create_question(self, request, *args, **kwargs)
 
     serializer_class = ChoiceOneQuestionModelSerializer
 
@@ -126,7 +125,7 @@ class ChoiceMultiQuestionCreateViewSet(mixins.CreateModelMixin, viewsets.Generic
     permission_classes = [IsTestOwner, ]
 
     def create(self, request, *args, **kwargs):
-        return create_question(self, request, **kwargs)
+        return create_question(self, request, *args, **kwargs)
 
     serializer_class = ChoiceMultiQuestionModelSerializer
 
@@ -135,7 +134,7 @@ class ScaleQuestionCreateViewSet(mixins.CreateModelMixin, viewsets.GenericViewSe
     permission_classes = [IsTestOwner, ]
 
     def create(self, request, *args, **kwargs):
-        return create_question(self, request, **kwargs)
+        return create_question(self, request, *args, **kwargs)
 
     serializer_class = ScaleQuestionModelSerializer
 

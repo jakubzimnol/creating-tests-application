@@ -53,7 +53,7 @@ class Test(models.Model):
     description = models.TextField()
 
     def __str__(self):
-        return self.name
+        return " ".join((str(self.pk), self.name))
 
 
 class Grade(models.Model):

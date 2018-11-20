@@ -1,4 +1,4 @@
-from requests import Response
+from rest_framework.response import Response
 from rest_framework import status
 
 from creating_tests_app.models import QuestionBase
@@ -33,13 +33,13 @@ answer_serializer = {
 }
 
 
-def create_question(self, request, **kwargs):
+def create_question(self, request, *args, **kwargs):
     data = request.data.copy()
     data['test'] = kwargs['test_id']
     serializer = self.get_serializer(data=data)
     serializer.is_valid(raise_exception=True)
     serializer.save()
-    return Response(serializer.data, status.HTTP_201_CREATED)
+    return Response(serializer.data, status=status.HTTP_201_CREATED)
 
 
 def get_full_serialized_question_data_list(queryset_list):

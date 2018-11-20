@@ -338,7 +338,7 @@ class ScaleQuestionTest(QuestionTestCase):
         self.url_question = reverse("tests:scale_question-list", kwargs={'test_id': self.test.id})
         super().setUp()
 
-    def test_choice_multi_answer_post(self):
+    def test_scale_answer_post(self):
         self.check_method(self.client.post, self.url_question,
                           self.question_data, status.HTTP_403_FORBIDDEN)
         self.tearDown()
@@ -364,7 +364,7 @@ class BooleanQuestionTest(QuestionTestCase):
         self.url_question = reverse("tests:boolean_question-list", kwargs={'test_id': self.test.id})
         super().setUp()
 
-    def test_choice_multi_answer_post(self):
+    def test_boolean_answer_post(self):
         self.check_method(self.client.post, self.url_question,
                           self.question_data, status.HTTP_403_FORBIDDEN)
         self.tearDown()

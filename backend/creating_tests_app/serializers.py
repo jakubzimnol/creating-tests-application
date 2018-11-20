@@ -81,7 +81,7 @@ class ChoiceQuestionBaseSerializer(BaseQuestionModelSerializer):
         proper_answer = copy_validated_data.pop('proper_answer')
         copy_validated_data['one_choice'] = True
         question = self.create_and_set_question_type(
-            copy_validated_data, ChoiceOneQuestionModelSerializer, question_type)
+            copy_validated_data, ChoiceQuestionBaseSerializer, question_type)
         self.set_question_in_options(options, question)
         options = self.save_options(options)
         question.proper_answer.set(self.get_proper_answers(proper_answer, options))
