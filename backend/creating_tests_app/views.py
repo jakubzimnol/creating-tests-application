@@ -19,7 +19,7 @@ class TestsModelViewSet(ModelViewSet):
         return Test.objects.all()
 
     def get_permissions(self):
-        if self.action in ['create', 'automated_check', 'answers', 'send_email']:
+        if self.action in ['create', 'automated_check', 'answers', 'send_email', 'approve_answers']:
             permission_classes = [IsAuthenticated]
         elif self.action in ['update', 'partial_update', 'destroy']:
             permission_classes = [permission_or(IsOwner, IsAdmin)]
@@ -38,22 +38,22 @@ class TestsModelViewSet(ModelViewSet):
         data = get_full_serialized_answer_data_list(queryset)
         return Response(data, status.HTTP_200_OK)
 
-    @action(methods=['post'], detail=True, url_path='approve-answers')
+    @action(methods=['post'], detail=True, url_path='approve-answers', url_name="approve")
     def approve_answers(self, request, pk):
         test = Test.objects.get(id=pk)
         test.user_answered.add(request.user)
         return Response('', status.HTTP_200_OK)
 
-    @action(methods=['post'], detail=True, url_path='automated-check')
+    @action(methods=['post'], detail=True, url_path='automated-check', url_name="check")
     def automated_check(self, request, pk):
         test = Test.objects.get(id=pk)
-        if request.user not in test.user_answered:
+        if request.user not in test.user_answered.all():
             return Response("You must approve answers first", status.HTTP_403_FORBIDDEN)
         queryset = AnswerBase.objects.filter(question__test=pk).all().select_subclasses()
         user_answers_serialized = get_and_check_serialized_answer_list(queryset)
         return Response(user_answers_serialized, status.HTTP_200_OK)
 
-    @action(methods=['post'], detail=True, url_path='send-email')
+    @action(methods=['post'], detail=True, url_path='send-email', url_name="email")
     def send_email(self, request, pk):
         data = {'user_id': request.user.id, 'test_id': pk}
         serializer = EmailSerializer(data=data)

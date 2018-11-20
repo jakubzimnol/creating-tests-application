@@ -70,10 +70,11 @@ class AnswerBase(models.Model):
     objects = InheritanceManager()
 
     def check_answer(self):
-        if self.answer == self.question.proper_answer:
+        if self.answer == QuestionBase.objects.get_subclass(id=self.question.id).proper_answer:
             self.points = 1
         else:
             self.points = 0
+        self.save()
         return self.points
 
 

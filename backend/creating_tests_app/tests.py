@@ -54,6 +54,9 @@ class TestApiTestCase(EndpointsAccessAPITestCase):
         self.test.save()
         self.delete_test_data = {'id': self.test.id}
         self.url_tests_details = reverse("tests:tests-detail", kwargs={'pk': self.test.id})
+        self.url_tests_email = reverse("tests:tests-email", kwargs={"pk": self.test.id})
+        self.url_tests_approve = reverse("tests:tests-approve", kwargs={"pk": self.test.id})
+        self.url_tests_check = reverse("tests:tests-check", kwargs={"pk": self.test.id})
         super().setUp()
 
     def tearDown(self):
@@ -138,6 +141,64 @@ class TestApiTestCase(EndpointsAccessAPITestCase):
         self.setUp()
         self.check_admin_authenticated_method(self.client.put, self.url_tests_details,
                                               self.test_data, status.HTTP_200_OK)
+
+    def test_send_mail(self):
+        self.check_method(self.client.post, self.url_tests_email,
+                          self.test_data, status.HTTP_403_FORBIDDEN)
+        self.tearDown()
+        self.setUp()
+        self.check_authenticated_method(self.client.post, self.url_tests_email,
+                                        self.test_data, status.HTTP_200_OK)
+        self.tearDown()
+        self.setUp()
+        self.check_author_authenticated_method(self.client.post, self.url_tests_email,
+                                               self.test_data, status.HTTP_200_OK)
+        self.tearDown()
+        self.setUp()
+        self.check_admin_authenticated_method(self.client.post, self.url_tests_email,
+                                              self.test_data, status.HTTP_200_OK)
+
+    def test_approve_answer(self):
+        self.check_method(self.client.post, self.url_tests_approve,
+                          self.test_data, status.HTTP_403_FORBIDDEN)
+        self.tearDown()
+        self.setUp()
+        self.check_authenticated_method(self.client.post, self.url_tests_approve,
+                                        self.test_data, status.HTTP_200_OK)
+        self.tearDown()
+        self.setUp()
+        self.check_author_authenticated_method(self.client.post, self.url_tests_approve,
+                                               self.test_data, status.HTTP_200_OK)
+        self.tearDown()
+        self.setUp()
+        self.check_admin_authenticated_method(self.client.post, self.url_tests_approve,
+                                              self.test_data, status.HTTP_200_OK)
+
+    def test_check_automated_answer(self):
+        self.check_method(self.client.post, self.url_tests_check,
+                          self.test_data, status.HTTP_403_FORBIDDEN)
+        self.tearDown()
+        self.setUp()
+        self.check_authenticated_method(self.client.post, self.url_tests_check,
+                                        self.test_data, status.HTTP_403_FORBIDDEN)
+        self.tearDown()
+        self.setUp()
+        self.check_author_authenticated_method(self.client.post, self.url_tests_check,
+                                               self.test_data, status.HTTP_403_FORBIDDEN)
+        self.tearDown()
+        self.setUp()
+        self.check_admin_authenticated_method(self.client.post, self.url_tests_check,
+                                              self.test_data, status.HTTP_403_FORBIDDEN)
+
+    def test_check_automated_answer_after_approve(self):
+        self.test.user_answered.add(self.user2)
+        self.check_authenticated_method(self.client.post, self.url_tests_check,
+                                        self.test_data, status.HTTP_200_OK)
+        self.tearDown()
+        self.setUp()
+        self.test.user_answered.add(self.user)
+        self.check_author_authenticated_method(self.client.post, self.url_tests_check,
+                                               self.test_data, status.HTTP_200_OK)
 
 
 class QuestionTestCase(EndpointsAccessAPITestCase):
@@ -403,8 +464,8 @@ class OpenAnswerTestCase(AnswerTestCase):
                                  kwargs={'test_id': cls.test.id,
                                          "question_id": cls.question.id})
         cls.check_url = reverse("tests:answer-check",
-                                 kwargs={'test_id': cls.test.id,
-                                         "question_id": cls.question.id})
+                                kwargs={'test_id': cls.test.id,
+                                        "question_id": cls.question.id})
         cls.answer_data = {"answer": "a"}
 
     def setUp(self):
@@ -490,4 +551,5 @@ class OpenAnswerTestCase(AnswerTestCase):
         self.setUp()
         self.check_admin_authenticated_method(self.client.put, self.check_url,
                                               self.check_data, status.HTTP_403_FORBIDDEN)
+
 
