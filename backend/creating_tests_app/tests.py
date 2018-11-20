@@ -386,6 +386,8 @@ class AnswerTestCase(QuestionTestCase):
         super(AnswerTestCase, cls).setUpTestData()
         cls.test = TestFactory(user=cls.user)
         cls.test.save()
+        cls.check_data = {"points": 1}
+
 
     def tearDown(self):
         AnswerBase.objects.all().delete()
@@ -398,6 +400,9 @@ class OpenAnswerTestCase(AnswerTestCase):
         cls.question = OpenQuestionFactory(test=cls.test)
         cls.question.save()
         cls.url_answer = reverse("tests:answer-list",
+                                 kwargs={'test_id': cls.test.id,
+                                         "question_id": cls.question.id})
+        cls.check_url = reverse("tests:answer-check",
                                  kwargs={'test_id': cls.test.id,
                                          "question_id": cls.question.id})
         cls.answer_data = {"answer": "a"}
@@ -466,4 +471,23 @@ class OpenAnswerTestCase(AnswerTestCase):
         self.setUp()
         self.check_admin_authenticated_method(self.client.delete, self.url_answer,
                                               self.answer_data, status.HTTP_404_NOT_FOUND)
+
+    def test_check_answer(self):
+        self.test.user_answered.add(self.user)
+        self.test.save()
+
+        self.check_method(self.client.put, self.check_url,
+                          self.check_data, status.HTTP_403_FORBIDDEN)
+        self.tearDown()
+        self.setUp()
+        self.check_authenticated_method(self.client.put, self.check_url,
+                                        self.check_data, status.HTTP_403_FORBIDDEN)
+        self.tearDown()
+        self.setUp()
+        self.check_author_authenticated_method(self.client.put, self.check_url,
+                                               self.check_data, status.HTTP_200_OK)
+        self.tearDown()
+        self.setUp()
+        self.check_admin_authenticated_method(self.client.put, self.check_url,
+                                              self.check_data, status.HTTP_403_FORBIDDEN)
 
