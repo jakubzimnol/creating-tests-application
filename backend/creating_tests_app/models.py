@@ -48,11 +48,19 @@ class ScaleQuestion(QuestionBase):
 
 class Test(models.Model):
     user = models.ForeignKey('auth.User', related_name='tests', blank=True, null=True, on_delete=models.CASCADE)
+    user_answered = models.ManyToManyField('auth.User')
     name = models.CharField(max_length=120)
     description = models.TextField()
 
     def __str__(self):
-        return self.name
+        return " ".join((str(self.pk), self.name))
+
+
+class Grade(models.Model):
+    points = models.FloatField()
+    grade = models.FloatField()
+    user = models.ForeignKey('auth.user', on_delete=models.CASCADE, related_name='grades')
+    test = models.ForeignKey(Test, on_delete=models.CASCADE, related_name='grades')
 
 
 class AnswerBase(models.Model):
