@@ -25,7 +25,7 @@ class IsOwner(permissions.BasePermission):
 
 class IsTestOwner(permissions.BasePermission):
     def has_permission(self, request, view):
-        return request.user == Test.objects.get(id=view.kwargs['test_id']).user
+        return request.user == Test.objects.get(id=view.kwargs.get('test_id')).user
 
     def has_object_permission(self, request, view, obj):
         return obj.test.user == request.user
