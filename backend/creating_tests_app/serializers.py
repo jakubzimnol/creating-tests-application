@@ -5,6 +5,7 @@ from django.template.loader import render_to_string
 from django.utils.html import strip_tags
 from rest_framework import serializers
 
+from creating_test_project import settings
 from creating_tests_app.models import Test, QuestionBase, OpenQuestion, ChoiceQuestion, BooleanQuestion, ScaleQuestion, \
     BooleanAnswer, OpenAnswer, ScaleAnswer, ChoiceAnswer, Choice, AnswerBase
 
@@ -225,7 +226,7 @@ class EmailSerializer(serializers.Serializer):
 
     def generate_mail_message(self, user, answers, test):
         context = {'answers': answers, 'user': user, 'test': test}
-        subject, from_email = 'Exam results', 'pythoninventorizationproject@gmail.com'
+        subject, from_email = 'Exam results', settings.EMAIL_HOST_USER
         to = user.email
         html_content = render_to_string('email.html', context)
         text_content = strip_tags(html_content)

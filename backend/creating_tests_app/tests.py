@@ -551,5 +551,3 @@ class OpenAnswerTestCase(AnswerTestCase):
         self.setUp()
         self.check_admin_authenticated_method(self.client.put, self.check_url,
                                               self.check_data, status.HTTP_403_FORBIDDEN)
-
-

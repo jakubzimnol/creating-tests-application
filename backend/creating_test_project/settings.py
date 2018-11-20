@@ -130,7 +130,13 @@ MEDIA_URL = '/api/media/'
 
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
-EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER')
-EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_USER')
+
+if DEBUG == True:
+    EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER') or 'pythoninventorizationproject@gmail.com'
+    EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_USER') or 'easy_pasword'
+else:
+    EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
+    EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_USER')
+
 EMAIL_USE_TLS = True
 EMAIL_USE_SSL = False
