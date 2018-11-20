@@ -1,5 +1,7 @@
 from rest_framework import permissions
 
+from creating_tests_app.models import Test
+
 
 class IsAdmin(permissions.BasePermission):
     """
@@ -23,7 +25,7 @@ class IsOwner(permissions.BasePermission):
 
 class IsTestOwner(permissions.BasePermission):
     def has_permission(self, request, view):
-        return True
+        return request.user == Test.objects.get(id=view.kwargs['test_id']).user
 
     def has_object_permission(self, request, view, obj):
         return obj.test.user == request.user

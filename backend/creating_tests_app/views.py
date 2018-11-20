@@ -159,13 +159,16 @@ class AnswerModelViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
         return AnswerBase.objects.filter(question=self.kwargs['question_id'],
                                          user=self.request.user.id).select_subclasses()
 
-    def create(self, request, *args, **kwargs):
-        if self.get_queryset():
-            return Response('You can not post more answers', status.HTTP_403_FORBIDDEN)
+    def get_data_with_added_user_and_question(self, request, kwargs):
         data = request.data.copy()
         data['user'] = request.user.id
         data['question'] = kwargs['question_id']
-        serializer = self.get_serializer(data=data)
+        return data
+
+    def create(self, request, *args, **kwargs):
+        if self.get_queryset():
+            return Response('You can not post more answers', status.HTTP_403_FORBIDDEN)
+        serializer = self.get_serializer(data=self.get_data_with_added_user_and_question(request, kwargs))
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data, status.HTTP_201_CREATED)
@@ -173,7 +176,9 @@ class AnswerModelViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
     def put(self, request, *args, **kwargs):
         partial = kwargs.pop('partial', False)
         instance = get_object_or_404(self.get_queryset())
-        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer = self.get_serializer(instance,
+                                         data=self.get_data_with_added_user_and_question(request, kwargs),
+                                         partial=partial)
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data)

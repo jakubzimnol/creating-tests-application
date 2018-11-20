@@ -4,9 +4,8 @@ from rest_framework import status
 from rest_framework.test import APITestCase
 
 from creating_tests_app.models import QuestionBase, Test, AnswerBase
-from creating_tests_app.test_fixture import TestFactory, OpenQuestionFactory, OpenAnswerFactory, ChoiceAnswerFactory, \
-    ScaleQuestionFactory, ScaleAnswerFactory, ChoiceOneQuestionFactory, ChoiceFactory, ChoiceMultiQuestionFactory, \
-    BooleanQuestionFactory, BooleanAnswerFactory
+from creating_tests_app.test_fixture import TestFactory, OpenQuestionFactory, OpenAnswerFactory, ScaleQuestionFactory, \
+    ChoiceOneQuestionFactory, ChoiceFactory, ChoiceMultiQuestionFactory, BooleanQuestionFactory
 
 
 class EndpointsAccessAPITestCase(APITestCase):
@@ -149,18 +148,18 @@ class QuestionTestCase(EndpointsAccessAPITestCase):
         cls.test.save()
 
     def setUp(self):
-        self.open_question = OpenQuestionFactory(test=self.test)
-        self.open_question.save()
+        self.question = OpenQuestionFactory(test=self.test)
+        self.question.save()
         self.choice_one_question = OpenQuestionFactory(test=self.test)
         self.choice_one_question.save()
-        self.open_answer = OpenAnswerFactory(question=self.open_question)
+        self.open_answer = OpenAnswerFactory(question=self.question)
         self.open_answer.save()
         self.open_question_data = {"question_content": "some_name", "answer": self.open_answer.id,
                                    "test": self.test.id, "number": 1}
-        self.delete_question_data = {'id': self.open_question.id}
+        self.delete_question_data = {'id': self.question.id}
         self.url_questions_list = reverse("tests:questions-list", kwargs={'test_id': self.test.id})
         self.url_questions_details = reverse(
-            "tests:questions-detail", kwargs={'test_id': self.test.id, 'pk': self.open_question.id})
+            "tests:questions-detail", kwargs={'test_id': self.test.id, 'pk': self.question.id})
         super().setUp()
 
     def tearDown(self):
@@ -242,13 +241,13 @@ class OpenQuestionTest(QuestionTestCase):
         self.url_question_open = reverse("tests:open_question-list", kwargs={'test_id': self.test.id})
         super().setUp()
 
-    def test_open_answer_post(self):
+    def test_open_question_post(self):
         self.check_method(self.client.post, self.url_question_open,
                           self.open_question_data, status.HTTP_403_FORBIDDEN)
         self.tearDown()
         self.setUp()
         self.check_authenticated_method(self.client.post, self.url_question_open,
-                                        self.open_question_data, status.HTTP_201_CREATED)
+                                        self.open_question_data, status.HTTP_403_FORBIDDEN)
         self.tearDown()
         self.setUp()
         self.check_author_authenticated_method(self.client.post, self.url_question_open,
@@ -256,7 +255,7 @@ class OpenQuestionTest(QuestionTestCase):
         self.tearDown()
         self.setUp()
         self.check_admin_authenticated_method(self.client.post, self.url_question_open,
-                                              self.open_question_data, status.HTTP_201_CREATED)
+                                              self.open_question_data, status.HTTP_403_FORBIDDEN)
 
 
 class ChoiceOneTest(QuestionTestCase):
@@ -277,13 +276,13 @@ class ChoiceOneTest(QuestionTestCase):
         self.url_question_choice_one = reverse("tests:choice_one_question-list", kwargs={'test_id': self.test.id})
         super().setUp()
 
-    def test_choice_one_answer_post(self):
+    def test_choice_one_question_post(self):
         self.check_method(self.client.post, self.url_question_choice_one,
                           self.choice_one_question_data, status.HTTP_403_FORBIDDEN)
         self.tearDown()
         self.setUp()
         self.check_authenticated_method(self.client.post, self.url_question_choice_one,
-                                        self.choice_one_question_data, status.HTTP_201_CREATED)
+                                        self.choice_one_question_data, status.HTTP_403_FORBIDDEN)
         self.tearDown()
         self.setUp()
         self.check_author_authenticated_method(self.client.post, self.url_question_choice_one,
@@ -291,7 +290,7 @@ class ChoiceOneTest(QuestionTestCase):
         self.tearDown()
         self.setUp()
         self.check_admin_authenticated_method(self.client.post, self.url_question_choice_one,
-                                              self.choice_one_question_data, status.HTTP_201_CREATED)
+                                              self.choice_one_question_data, status.HTTP_403_FORBIDDEN)
 
 
 class ChoiceMultiQuestionTest(QuestionTestCase):
@@ -312,13 +311,13 @@ class ChoiceMultiQuestionTest(QuestionTestCase):
         self.url_question = reverse("tests:choice_multi_question-list", kwargs={'test_id': self.test.id})
         super().setUp()
 
-    def test_choice_multi_answer_post(self):
+    def test_choice_multi_question_post(self):
         self.check_method(self.client.post, self.url_question,
                           self.question_data, status.HTTP_403_FORBIDDEN)
         self.tearDown()
         self.setUp()
         self.check_authenticated_method(self.client.post, self.url_question,
-                                        self.question_data, status.HTTP_201_CREATED)
+                                        self.question_data, status.HTTP_403_FORBIDDEN)
         self.tearDown()
         self.setUp()
         self.check_author_authenticated_method(self.client.post, self.url_question,
@@ -326,7 +325,7 @@ class ChoiceMultiQuestionTest(QuestionTestCase):
         self.tearDown()
         self.setUp()
         self.check_admin_authenticated_method(self.client.post, self.url_question,
-                                              self.question_data, status.HTTP_201_CREATED)
+                                              self.question_data, status.HTTP_403_FORBIDDEN)
 
 
 class ScaleQuestionTest(QuestionTestCase):
@@ -338,13 +337,13 @@ class ScaleQuestionTest(QuestionTestCase):
         self.url_question = reverse("tests:scale_question-list", kwargs={'test_id': self.test.id})
         super().setUp()
 
-    def test_scale_answer_post(self):
+    def test_scale_question_post(self):
         self.check_method(self.client.post, self.url_question,
                           self.question_data, status.HTTP_403_FORBIDDEN)
         self.tearDown()
         self.setUp()
         self.check_authenticated_method(self.client.post, self.url_question,
-                                        self.question_data, status.HTTP_201_CREATED)
+                                        self.question_data, status.HTTP_403_FORBIDDEN)
         self.tearDown()
         self.setUp()
         self.check_author_authenticated_method(self.client.post, self.url_question,
@@ -352,7 +351,7 @@ class ScaleQuestionTest(QuestionTestCase):
         self.tearDown()
         self.setUp()
         self.check_admin_authenticated_method(self.client.post, self.url_question,
-                                              self.question_data, status.HTTP_201_CREATED)
+                                              self.question_data, status.HTTP_403_FORBIDDEN)
 
 
 class BooleanQuestionTest(QuestionTestCase):
@@ -364,13 +363,13 @@ class BooleanQuestionTest(QuestionTestCase):
         self.url_question = reverse("tests:boolean_question-list", kwargs={'test_id': self.test.id})
         super().setUp()
 
-    def test_boolean_answer_post(self):
+    def test_boolean_question_post(self):
         self.check_method(self.client.post, self.url_question,
                           self.question_data, status.HTTP_403_FORBIDDEN)
         self.tearDown()
         self.setUp()
         self.check_authenticated_method(self.client.post, self.url_question,
-                                        self.question_data, status.HTTP_201_CREATED)
+                                        self.question_data, status.HTTP_403_FORBIDDEN)
         self.tearDown()
         self.setUp()
         self.check_author_authenticated_method(self.client.post, self.url_question,
@@ -378,31 +377,93 @@ class BooleanQuestionTest(QuestionTestCase):
         self.tearDown()
         self.setUp()
         self.check_admin_authenticated_method(self.client.post, self.url_question,
-                                              self.question_data, status.HTTP_201_CREATED)
+                                              self.question_data, status.HTTP_403_FORBIDDEN)
 
 
-  # def setUp(self):
-  #       self.test = TestFactory(user=self.user)
-  #       self.test.save()
-  #       self.open_question = OpenQuestionFactory(test=self.test)
-  #       self.open_question.save()
-  #       self.choice_one_question = OpenQuestionFactory(test=self.test)
-  #       self.choice_one_question.save()
-  #       self.open_answer = OpenAnswerFactory(question=self.open_question)
-  #       self.open_answer.save()
-  #       self.choice_one_answer = ChoiceAnswerFactory(question=self.choice_one_question)
-  #       self.delete_test_data = {'id': self.test.id}
-  #       self.open_question_data = {"question_content": "some_name", "answer": self.open_answer.id,
-  #                                  "test": self.test.id, "number": 1}
-  #       self.choice_one_question_data = {"question_content": "some_name", "answer": self.choice_one_answer.id,
-  #                                        "test": self.test.id, "number": 1}
-  #       self.delete_question_data = {'id': self.open_question.id}
-  #       self.url_tests_details = reverse("tests:tests-detail", kwargs={'pk': self.test.id})
-  #       self.url_questions_list = reverse("tests:questions-list", kwargs={'test_id': self.test.id})
-  #       self.url_questions_details = reverse(
-  #           "tests:questions-detail", kwargs={'test_id': self.test.id, 'pk': self.open_question.id})
-  #       self.url_answer = reverse(
-  #           "tests:answer-list", kwargs={'test_id': self.test.id, 'question_id': self.open_question.id})
-  #       self.url_question_open = reverse("tests:open_question-list", kwargs={'test_id': self.test.id})
-  #       self.url_question_choice_one = reverse("tests:choice_one_question-list", kwargs={'test_id': self.test.id})
-  #       super().setUp()
+class AnswerTestCase(QuestionTestCase):
+    @classmethod
+    def setUpTestData(cls):
+        super(AnswerTestCase, cls).setUpTestData()
+        cls.test = TestFactory(user=cls.user)
+        cls.test.save()
+
+    def tearDown(self):
+        AnswerBase.objects.all().delete()
+
+
+class OpenAnswerTestCase(AnswerTestCase):
+    @classmethod
+    def setUpTestData(cls):
+        super(OpenAnswerTestCase, cls).setUpTestData()
+        cls.question = OpenQuestionFactory(test=cls.test)
+        cls.question.save()
+        cls.url_answer = reverse("tests:answer-list",
+                                 kwargs={'test_id': cls.test.id,
+                                         "question_id": cls.question.id})
+        cls.answer_data = {"answer": "a"}
+
+    def setUp(self):
+        self.open_answer = OpenAnswerFactory(question=self.question)
+        self.open_answer.save()
+
+    def test_open_answer_post(self):
+        self.check_method(self.client.post, self.url_answer,
+                          self.answer_data, status.HTTP_403_FORBIDDEN)
+        self.tearDown()
+        self.check_authenticated_method(self.client.post, self.url_answer,
+                                        self.answer_data, status.HTTP_201_CREATED)
+        self.tearDown()
+        self.check_author_authenticated_method(self.client.post, self.url_answer,
+                                               self.answer_data, status.HTTP_201_CREATED)
+        self.tearDown()
+        self.check_admin_authenticated_method(self.client.post, self.url_answer,
+                                              self.answer_data, status.HTTP_201_CREATED)
+
+    def test_open_answer_get(self):
+        self.check_method(self.client.get, self.url_answer,
+                          self.empty_data, status.HTTP_403_FORBIDDEN)
+        self.tearDown()
+        self.setUp()
+        self.check_authenticated_method(self.client.get, self.url_answer,
+                                        self.empty_data, status.HTTP_404_NOT_FOUND)
+        self.tearDown()
+        self.setUp()
+        self.check_author_authenticated_method(self.client.get, self.url_answer,
+                                               self.empty_data, status.HTTP_200_OK)
+        self.tearDown()
+        self.setUp()
+        self.check_admin_authenticated_method(self.client.get, self.url_answer,
+                                              self.empty_data, status.HTTP_404_NOT_FOUND)
+
+    def test_open_answer_put(self):
+        self.check_method(self.client.put, self.url_answer,
+                          self.answer_data, status.HTTP_403_FORBIDDEN)
+        self.tearDown()
+        self.setUp()
+        self.check_authenticated_method(self.client.put, self.url_answer,
+                                        self.answer_data, status.HTTP_404_NOT_FOUND)
+        self.tearDown()
+        self.setUp()
+        self.check_author_authenticated_method(self.client.put, self.url_answer,
+                                               self.answer_data, status.HTTP_200_OK)
+        self.tearDown()
+        self.setUp()
+        self.check_admin_authenticated_method(self.client.put, self.url_answer,
+                                              self.answer_data, status.HTTP_404_NOT_FOUND)
+
+    def test_open_answer_delete(self):
+        self.check_method(self.client.delete, self.url_answer,
+                          self.answer_data, status.HTTP_403_FORBIDDEN)
+        self.tearDown()
+        self.setUp()
+        self.check_authenticated_method(self.client.delete, self.url_answer,
+                                        self.answer_data, status.HTTP_404_NOT_FOUND)
+        self.tearDown()
+        self.setUp()
+        self.check_author_authenticated_method(self.client.delete, self.url_answer,
+                                               self.answer_data, status.HTTP_404_NOT_FOUND)
+        self.tearDown()
+        self.setUp()
+        self.check_admin_authenticated_method(self.client.delete, self.url_answer,
+                                              self.answer_data, status.HTTP_404_NOT_FOUND)
+
