@@ -1,6 +1,6 @@
 from rest_framework.routers import DefaultRouter
 
-from creating_tests_app.views import TestsModelViewSet, QuestionReadOnlyModelViewSet, OpenQuestionCreateViewSet, \
+from creating_tests_app.views import TestsModelViewSet, QuestionMixinGenericViewSet, OpenQuestionCreateViewSet, \
     BooleanQuestionCreateViewSet, ChoiceOneQuestionCreateViewSet, ChoiceMultiQuestionCreateViewSet, \
     ScaleQuestionCreateViewSet, AnswerModelViewSet
 
@@ -27,7 +27,7 @@ router.register('tests/(?P<test_id>[^/.]+)/questions/scale',
                 ScaleQuestionCreateViewSet,
                 base_name='scale_question')
 router.register('tests/(?P<test_id>[^/.]+)/questions',
-                QuestionReadOnlyModelViewSet,
+                QuestionMixinGenericViewSet,
                 base_name='questions')
 router.register('tests/(?P<test_id>[^/.]+)/questions/(?P<question_id>[^/.]+)/answer',
                 AnswerModelViewSet,
