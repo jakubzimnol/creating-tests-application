@@ -1,3 +1,6 @@
+import pdb
+
+from django.contrib.auth.models import User
 from django.shortcuts import get_object_or_404
 from rest_framework import status, mixins, viewsets
 from rest_framework.decorators import action
@@ -9,17 +12,19 @@ from creating_tests_app.models import Test, QuestionBase, AnswerBase
 from creating_tests_app.permissions import permission_or, IsOwner, IsAdmin, ReadOnly, IsTestOwner, IsQuestionTestOwner
 from creating_tests_app.serializers import TestModelSerializer, OpenQuestionModelSerializer, \
     BooleanQuestionModelSerializer, ChoiceOneQuestionModelSerializer, ChoiceMultiQuestionModelSerializer, \
-    ScaleQuestionModelSerializer, EmailSerializer, CheckAnswerSerializer
+    ScaleQuestionModelSerializer, EmailSerializer, CheckAnswerSerializer, RankingSerializer
 from creating_tests_app.services import get_full_serialized_question_data_list, get_and_check_serialized_answer_list, \
     answer_serializer, question_user_serializer, get_full_serialized_answer_data_list, create_question
 
 
 class TestsModelViewSet(ModelViewSet):
     def get_queryset(self):
+        if self.action in ['ranking']:
+            return User.objects.filter(tests=self.kwargs['pk']).all() #[:10]
         return Test.objects.all()
 
     def get_permissions(self):
-        if self.action in ['create', 'automated_check', 'answers', 'send_email', 'approve_answers']:
+        if self.action in ['create', 'automated_check', 'answers', 'send_email', 'approve_answers', 'ranking']:
             permission_classes = [IsAuthenticated]
         elif self.action in ['update', 'partial_update', 'destroy']:
             permission_classes = [permission_or(IsOwner, IsAdmin)]
@@ -30,6 +35,8 @@ class TestsModelViewSet(ModelViewSet):
     def get_serializer_class(self):
         if self.action in ['send_email', ]:
             return EmailSerializer
+        if self.action in ['ranking']:
+            return RankingSerializer
         return TestModelSerializer
 
     @action(methods=['get'], detail=True, url_path='answers')
@@ -61,6 +68,16 @@ class TestsModelViewSet(ModelViewSet):
         serializer.save()
         return Response(serializer.data, status.HTTP_200_OK)
 
+    @action(methods=['post'], detail=True)
+    def ranking(self, request, pk):
+        users = self.get_queryset()
+        data = [
+            {"user_id": user.id, "points": sum([answer.points for answer in user.answers.select_subclasses()])}
+            for user in users]
+        serializer = self.get_serializer(data=data, many=True)
+        serializer.is_valid(raise_exception=True)
+        return Response(serializer.data, status.HTTP_200_OK)
+
 
 class QuestionMixinGenericViewSet(mixins.RetrieveModelMixin, mixins.DestroyModelMixin,
                                   mixins.UpdateModelMixin, viewsets.GenericViewSet):
@@ -86,12 +103,12 @@ class QuestionMixinGenericViewSet(mixins.RetrieveModelMixin, mixins.DestroyModel
         return Response(data, status.HTTP_200_OK)
 
 
-class UserTestViewSet(viewsets.ModelViewSet):
-    @action(methods=['list', ], detail=True)
-    def answers(self, request, args, **kwargs):
-        queryset = self.get_queryset()
-        data = get_full_serialized_answer_data_list(queryset)
-        return Response(data, status.HTTP_200_OK)
+# class UserTestViewSet(viewsets.ModelViewSet):
+#     @action(methods=['list', ], detail=True)
+#     def answers(self, request, args, **kwargs):
+#         queryset = self.get_queryset()
+#         data = get_full_serialized_answer_data_list(queryset)
+#         return Response(data, status.HTTP_200_OK)
 
 
 class OpenQuestionCreateViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):

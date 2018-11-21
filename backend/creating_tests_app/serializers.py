@@ -160,7 +160,7 @@ class TestModelSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = Test
-        fields = ('name', 'description', 'questions')
+        fields = ('name', 'description', 'questions', 'user')
 
 
 class BaseAnswerSerializer(serializers.ModelSerializer):
@@ -246,3 +246,14 @@ class EmailSerializer(serializers.Serializer):
     def update(self, instance, validated_data):
         self.send_mail(validated_data)
         return validated_data
+
+
+class RankingSerializer(serializers.Serializer):
+    user_id = serializers.IntegerField(required=False)
+    points = serializers.FloatField(required=False)
+
+    def create(self, validated_data):
+        raise NotImplementedError
+
+    def update(self, instance, validated_data):
+        raise NotImplementedError
