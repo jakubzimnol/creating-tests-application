@@ -1,5 +1,3 @@
-import pdb
-
 from django.contrib.auth.models import User
 from django.shortcuts import get_object_or_404
 from rest_framework import status, mixins, viewsets
@@ -8,19 +6,20 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework.viewsets import ModelViewSet
 
-from creating_tests_app.models import Test, QuestionBase, AnswerBase
+from creating_tests_app.models import Test, QuestionBase, AnswerBase, Grade
 from creating_tests_app.permissions import permission_or, IsOwner, IsAdmin, ReadOnly, IsTestOwner, IsQuestionTestOwner
 from creating_tests_app.serializers import TestModelSerializer, OpenQuestionModelSerializer, \
     BooleanQuestionModelSerializer, ChoiceOneQuestionModelSerializer, ChoiceMultiQuestionModelSerializer, \
     ScaleQuestionModelSerializer, EmailSerializer, CheckAnswerSerializer, RankingSerializer
 from creating_tests_app.services import get_full_serialized_question_data_list, get_and_check_serialized_answer_list, \
-    answer_serializer, question_user_serializer, get_full_serialized_answer_data_list, create_question
+    answer_serializer, question_user_serializer, get_full_serialized_answer_data_list, create_question, create_grade
 
 
 class TestsModelViewSet(ModelViewSet):
     def get_queryset(self):
         if self.action in ['ranking']:
-            return User.objects.filter(tests=self.kwargs['pk']).all() #[:10]
+            return Grade.objects.filter(test_id=self.kwargs['pk']).order_by('points')[:10]
+            #return User.objects.filter(tests=self.kwargs['pk']).all()[:10]
         return Test.objects.all()
 
     def get_permissions(self):
@@ -48,7 +47,10 @@ class TestsModelViewSet(ModelViewSet):
     @action(methods=['post'], detail=True, url_path='approve-answers', url_name="approve")
     def approve_answers(self, request, pk):
         test = Test.objects.get(id=pk)
+        if request.user in test.user_answered.all():
+            return Response("You approved your answers", status.HTTP_403_FORBIDDEN)
         test.user_answered.add(request.user)
+        create_grade(request.user, test)
         return Response('', status.HTTP_200_OK)
 
     @action(methods=['post'], detail=True, url_path='automated-check', url_name="check")
@@ -58,6 +60,7 @@ class TestsModelViewSet(ModelViewSet):
             return Response("You must approve answers first", status.HTTP_403_FORBIDDEN)
         queryset = AnswerBase.objects.filter(question__test=pk).all().select_subclasses()
         user_answers_serialized = get_and_check_serialized_answer_list(queryset)
+        Grade.objects.get(test=test, user=request.user).update_grade()
         return Response(user_answers_serialized, status.HTTP_200_OK)
 
     @action(methods=['post'], detail=True, url_path='send-email', url_name="email")
@@ -68,12 +71,10 @@ class TestsModelViewSet(ModelViewSet):
         serializer.save()
         return Response(serializer.data, status.HTTP_200_OK)
 
-    @action(methods=['post'], detail=True)
+    @action(methods=['get'], detail=True)
     def ranking(self, request, pk):
-        users = self.get_queryset()
-        data = [
-            {"user_id": user.id, "points": sum([answer.points for answer in user.answers.select_subclasses()])}
-            for user in users]
+        grades = self.get_queryset()
+        data = [{"user_id": grade.user.id, "points": grade.points} for grade in grades]
         serializer = self.get_serializer(data=data, many=True)
         serializer.is_valid(raise_exception=True)
         return Response(serializer.data, status.HTTP_200_OK)
@@ -101,14 +102,6 @@ class QuestionMixinGenericViewSet(mixins.RetrieveModelMixin, mixins.DestroyModel
         queryset = self.get_queryset()
         data = get_full_serialized_question_data_list(queryset)
         return Response(data, status.HTTP_200_OK)
-
-
-# class UserTestViewSet(viewsets.ModelViewSet):
-#     @action(methods=['list', ], detail=True)
-#     def answers(self, request, args, **kwargs):
-#         queryset = self.get_queryset()
-#         data = get_full_serialized_answer_data_list(queryset)
-#         return Response(data, status.HTTP_200_OK)
 
 
 class OpenQuestionCreateViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):

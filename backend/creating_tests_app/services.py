@@ -1,7 +1,7 @@
 from rest_framework.response import Response
 from rest_framework import status
 
-from creating_tests_app.models import QuestionBase
+from creating_tests_app.models import QuestionBase, Grade
 from creating_tests_app.serializers import OpenQuestionModelSerializer, BooleanQuestionModelSerializer, \
     ChoiceOneQuestionModelSerializer, ChoiceMultiQuestionModelSerializer, ScaleQuestionModelSerializer, \
     BooleanAnswerSerializer, OpenAnswerSerializer, ScaleAnswerSerializer, ChoiceOneAnswerSerializer, \
@@ -65,3 +65,13 @@ def get_and_check_serialized_answer_list(queryset_list):
         serializer = answer_serializer[answer.question.question_type](answer)
         returning_data.append(serializer.data)
     return returning_data
+
+
+def create_grade(user, test):
+    grade = Grade(user=user, test=test)
+    grade.save()
+    grade.count_points()
+    grade.save()
+    grade.count_grade()
+    return grade.save()
+

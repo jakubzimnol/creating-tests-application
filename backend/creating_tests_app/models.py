@@ -57,10 +57,21 @@ class Test(models.Model):
 
 
 class Grade(models.Model):
-    points = models.FloatField()
-    grade = models.FloatField()
+    points = models.FloatField(default=0)
+    grade = models.FloatField(default=0)
     user = models.ForeignKey('auth.user', on_delete=models.CASCADE, related_name='grades')
     test = models.ForeignKey(Test, on_delete=models.CASCADE, related_name='grades')
+
+    def count_points(self):
+        self.points = sum(
+            [answer.points for answer in self.user.answers.filter(question__test=self.test).select_subclasses()])
+
+    def count_grade(self):
+        self.grade = self.points / self.test.questions.count()
+
+    def update_grade(self):
+        self.count_points()
+        self.count_grade()
 
 
 class AnswerBase(models.Model):
