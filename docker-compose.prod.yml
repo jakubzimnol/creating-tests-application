@@ -4,9 +4,9 @@ services:
   backend:
     command: bash -c "python manage.py collectstatic --noinput
          && python manage.py migrate
-         && uwsgi ../uwsgi.ini"
+         && uwsgi uwsgi.ini"
     volumes:
-      - static-files:/backend/eventsgo_project/static
+      - static-files:/backend/static
     restart: always
 
   nginx:
