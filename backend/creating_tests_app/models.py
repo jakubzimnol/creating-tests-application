@@ -67,7 +67,8 @@ class Grade(models.Model):
             [answer.points for answer in self.user.answers.filter(question__test=self.test).select_subclasses()])
 
     def count_grade(self):
-        self.grade = self.points / self.test.questions.count()
+        if self.test.questions.count():
+            self.grade = self.points / self.test.questions.count()
 
     def update_grade(self):
         self.count_points()

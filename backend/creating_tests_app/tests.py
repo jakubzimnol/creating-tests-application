@@ -3,7 +3,7 @@ from django.urls import reverse
 from rest_framework import status
 from rest_framework.test import APITestCase
 
-from creating_tests_app.models import QuestionBase, Test, AnswerBase
+from creating_tests_app.models import QuestionBase, Test, AnswerBase, Grade
 from creating_tests_app.test_fixture import TestFactory, OpenQuestionFactory, OpenAnswerFactory, ScaleQuestionFactory, \
     ChoiceOneQuestionFactory, ChoiceFactory, ChoiceMultiQuestionFactory, BooleanQuestionFactory
 
@@ -57,6 +57,7 @@ class TestApiTestCase(EndpointsAccessAPITestCase):
         self.url_tests_email = reverse("tests:tests-email", kwargs={"pk": self.test.id})
         self.url_tests_approve = reverse("tests:tests-approve", kwargs={"pk": self.test.id})
         self.url_tests_check = reverse("tests:tests-check", kwargs={"pk": self.test.id})
+        self.url_ranking = reverse("tests:tests-ranking", kwargs={"pk": self.test.id})
         super().setUp()
 
     def tearDown(self):
@@ -191,14 +192,32 @@ class TestApiTestCase(EndpointsAccessAPITestCase):
                                               self.test_data, status.HTTP_403_FORBIDDEN)
 
     def test_check_automated_answer_after_approve(self):
-        self.test.user_answered.add(self.user2)
+        self.client.force_login(self.user2)
+        self.client.post(self.url_tests_approve, data=self.test_data)
         self.check_authenticated_method(self.client.post, self.url_tests_check,
                                         self.test_data, status.HTTP_200_OK)
         self.tearDown()
         self.setUp()
-        self.test.user_answered.add(self.user)
+        self.check_author_authenticated_method(self.client.post, self.url_tests_approve,
+                                               self.test_data, status.HTTP_200_OK)
         self.check_author_authenticated_method(self.client.post, self.url_tests_check,
                                                self.test_data, status.HTTP_200_OK)
+
+    def test_ranking(self):
+        self.check_method(self.client.get, self.url_ranking,
+                          self.test_data, status.HTTP_403_FORBIDDEN)
+        self.tearDown()
+        self.setUp()
+        self.check_authenticated_method(self.client.get, self.url_ranking,
+                                        self.test_data, status.HTTP_200_OK)
+        self.tearDown()
+        self.setUp()
+        self.check_author_authenticated_method(self.client.get, self.url_ranking,
+                                               self.test_data, status.HTTP_200_OK)
+        self.tearDown()
+        self.setUp()
+        self.check_admin_authenticated_method(self.client.get, self.url_ranking,
+                                              self.test_data, status.HTTP_200_OK)
 
 
 class QuestionTestCase(EndpointsAccessAPITestCase):
@@ -551,3 +570,31 @@ class OpenAnswerTestCase(AnswerTestCase):
         self.setUp()
         self.check_admin_authenticated_method(self.client.put, self.check_url,
                                               self.check_data, status.HTTP_403_FORBIDDEN)
+
+
+class RankingTests(APITestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.user = User(username='testuser', email='test@test.com')
+        cls.user.set_password("randompassword")
+        cls.user.save()
+        cls.test = TestFactory(user=cls.user)
+        cls.test.save()
+
+    def setUp(self):
+        super(RankingTests, self).setUp()
+        self.url_ranking = reverse("tests:tests-ranking", kwargs={"pk": self.test.id})
+        self.users = []
+        self.users_points_list = []
+        for pref in range(0, 10):
+            user = User(username=pref)
+            user.set_password("randompassword")
+            user.save()
+            grade = Grade(user=user, test=self.test, points=pref)
+            grade.save()
+            self.users_points_list.append({"user_id": user.id, "points": pref})
+
+    def test_10_best_users(self):
+        self.client.force_login(self.user)
+        response = self.client.get(self.url_ranking)
+        self.assertCountEqual(response.data, self.users_points_list)

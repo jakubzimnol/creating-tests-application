@@ -19,7 +19,6 @@ class TestsModelViewSet(ModelViewSet):
     def get_queryset(self):
         if self.action in ['ranking']:
             return Grade.objects.filter(test_id=self.kwargs['pk']).order_by('points')[:10]
-            #return User.objects.filter(tests=self.kwargs['pk']).all()[:10]
         return Test.objects.all()
 
     def get_permissions(self):
@@ -60,7 +59,9 @@ class TestsModelViewSet(ModelViewSet):
             return Response("You must approve answers first", status.HTTP_403_FORBIDDEN)
         queryset = AnswerBase.objects.filter(question__test=pk).all().select_subclasses()
         user_answers_serialized = get_and_check_serialized_answer_list(queryset)
-        Grade.objects.get(test=test, user=request.user).update_grade()
+        grade = get_object_or_404(Grade, test=test, user=request.user)
+        if grade:
+            grade.update_grade()
         return Response(user_answers_serialized, status.HTTP_200_OK)
 
     @action(methods=['post'], detail=True, url_path='send-email', url_name="email")
