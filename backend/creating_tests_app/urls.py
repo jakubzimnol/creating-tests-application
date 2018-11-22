@@ -2,7 +2,7 @@ from rest_framework.routers import DefaultRouter
 
 from creating_tests_app.views import TestsModelViewSet, QuestionMixinGenericViewSet, OpenQuestionCreateViewSet, \
     BooleanQuestionCreateViewSet, ChoiceOneQuestionCreateViewSet, ChoiceMultiQuestionCreateViewSet, \
-    ScaleQuestionCreateViewSet, AnswerModelViewSet
+    ScaleQuestionCreateViewSet, AnswerModelViewSet, AnswersModelViewSet
 
 app_name = 'tests_urls'
 
@@ -32,4 +32,8 @@ router.register('tests/(?P<test_id>[^/.]+)/questions',
 router.register('tests/(?P<test_id>[^/.]+)/questions/(?P<question_id>[^/.]+)/answer',
                 AnswerModelViewSet,
                 base_name='answer')
+router.register('tests/(?P<test_id>[^/.]+)/questions/(?P<question_id>[^/.]+)/answers',
+                AnswersModelViewSet,
+                base_name='answers')
+
 urlpatterns = router.urls

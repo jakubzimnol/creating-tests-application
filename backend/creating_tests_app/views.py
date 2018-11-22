@@ -1,4 +1,3 @@
-from django.contrib.auth.models import User
 from django.shortcuts import get_object_or_404
 from rest_framework import status, mixins, viewsets
 from rest_framework.decorators import action
@@ -16,6 +15,8 @@ from creating_tests_app.services import get_full_serialized_question_data_list, 
 
 
 class TestsModelViewSet(ModelViewSet):
+    filter_fields = ('user', 'user_answered')
+
     def get_queryset(self):
         if self.action in ['ranking']:
             return Grade.objects.filter(test_id=self.kwargs['pk']).order_by('-points')[:10]
@@ -81,23 +82,56 @@ class TestsModelViewSet(ModelViewSet):
         return Response(serializer.data, status.HTTP_200_OK)
 
 
+class AnswersModelViewSet(viewsets.ReadOnlyModelViewSet):
+    filter_fields = {'points': ['lt', 'gt', 'exact'],
+                     'question': ['exact', ]}
+
+    def get_permissions(self):
+        permission_classes = [permission_or(IsQuestionTestOwner, IsAdmin)]
+        return [permission() for permission in permission_classes]
+
+    def get_queryset(self):
+        if self.action in ['check']:
+            return AnswerBase.objects.get_subclass(id=self.kwargs['pk'])
+        return AnswerBase.objects.filter(question=self.kwargs['question_id']).select_subclasses()
+
+    def get_serializer_class(self):
+        if self.action in ['check']:
+            return CheckAnswerSerializer
+        question = QuestionBase.objects.get(id=self.kwargs['question_id'])
+        return answer_serializer[question.question_type]
+
+    @action(methods=['put'], detail=True, url_path='check')
+    def check(self, request, *args, **kwargs):
+        test = Test.objects.get(id=kwargs['test_id'])
+        if request.user not in test.user_answered.all():
+            return Response("Answers must be approved first", status.HTTP_403_FORBIDDEN)
+        partial = kwargs.pop('partial', False)
+        instance = self.get_queryset() #get_object_or_404(
+        serializer = self.get_serializer(instance, data=request.data, partial=partial)
+        serializer.is_valid(raise_exception=True)
+        serializer.save()
+        return Response(serializer.data)
+
+
 class QuestionMixinGenericViewSet(mixins.RetrieveModelMixin, mixins.DestroyModelMixin,
                                   mixins.UpdateModelMixin, viewsets.GenericViewSet):
+
     def get_permissions(self):
         permission_classes = [IsAuthenticated]
-        if self.action in ['update', 'partial_update', 'destroy', 'answers']:
+        if self.action in ['update', 'partial_update', 'destroy']:
             permission_classes = [permission_or(IsTestOwner, IsAdmin)]
         return [permission() for permission in permission_classes]
 
     def get_queryset(self):
-        if self.action in ['answers', ]:
-            return AnswerBase.objects.filter(question=self.kwargs['question_id']).select_subclasses()
         return QuestionBase.objects.filter(test=self.kwargs['test_id']).select_subclasses()
 
     def get_serializer_class(self):
         question = QuestionBase.objects.get(id=self.kwargs['pk'])
         if self.action in ['retrieve', 'destroy', 'update', 'partial_update']:
             return question_user_serializer[question.question_type]
+        if self.action in ['answers']:
+            return answer_serializer[question.question_type]
 
     def list(self, request, *args, **kwargs):
         queryset = self.get_queryset()
@@ -151,18 +185,15 @@ class ScaleQuestionCreateViewSet(mixins.CreateModelMixin, viewsets.GenericViewSe
 
 
 class AnswerModelViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
+
     def get_permissions(self):
         permission_classes = [IsAuthenticated]
         test = Test.objects.get(id=self.kwargs['test_id'])
         if self.request.user in test.user_answered.all():
             permission_classes = [ReadOnly, ]
-        if self.action in ['check']:
-            permission_classes = [IsQuestionTestOwner, ]
         return [permission() for permission in permission_classes]
 
     def get_serializer_class(self):
-        if self.action in ['check']:
-            return CheckAnswerSerializer
         question = QuestionBase.objects.get(id=self.kwargs['question_id'])
         return answer_serializer[question.question_type]
 
@@ -207,15 +238,3 @@ class AnswerModelViewSet(mixins.CreateModelMixin, viewsets.GenericViewSet):
         if instance is not None:
             instance.delete()
         return Response(status=status.HTTP_204_NO_CONTENT)
-
-    @action(methods=['put'], detail=False, url_path='check')
-    def check(self, request, *args, **kwargs):
-        test = Test.objects.get(id=kwargs['test_id'])
-        if request.user not in test.user_answered.all():
-            return Response("Answers must be approved first", status.HTTP_403_FORBIDDEN)
-        partial = kwargs.pop('partial', False)
-        instance = get_object_or_404(self.get_queryset())
-        serializer = self.get_serializer(instance, data=request.data, partial=partial)
-        serializer.is_valid(raise_exception=True)
-        serializer.save()
-        return Response(serializer.data)

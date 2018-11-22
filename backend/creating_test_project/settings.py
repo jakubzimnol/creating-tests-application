@@ -40,6 +40,7 @@ INSTALLED_APPS = [
     'creating_tests_app',
     'rest_framework_swagger',
     'rest_framework',
+    'django_filters',
 ]
 
 MIDDLEWARE = [
@@ -70,6 +71,10 @@ TEMPLATES = [
     },
 ]
 
+REST_FRAMEWORK = {
+    'DEFAULT_FILTER_BACKENDS': ('django_filters.rest_framework.DjangoFilterBackend',)
+}
+
 WSGI_APPLICATION = 'creating_test_project.wsgi.application'
 
 
@@ -79,7 +84,7 @@ WSGI_APPLICATION = 'creating_test_project.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql',
-        'NAME': os.environ.get('POSTGRES_DB') or 'db',
+        'NAME': os.environ.get('POSTGRES_DB'),
         'USER': os.environ.get('POSTGRES_USER'),
         'HOST': os.environ.get('DB_HOST'),
         'PORT': os.environ.get('DB_PORT')
