@@ -18,7 +18,7 @@ from creating_tests_app.services import get_full_serialized_question_data_list, 
 class TestsModelViewSet(ModelViewSet):
     def get_queryset(self):
         if self.action in ['ranking']:
-            return Grade.objects.filter(test_id=self.kwargs['pk']).order_by('points')[:10]
+            return Grade.objects.filter(test_id=self.kwargs['pk']).order_by('-points')[:10]
         return Test.objects.all()
 
     def get_permissions(self):

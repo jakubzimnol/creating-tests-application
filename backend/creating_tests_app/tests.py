@@ -593,6 +593,7 @@ class RankingTests(APITestCase):
             grade = Grade(user=user, test=self.test, points=pref)
             grade.save()
             self.users_points_list.append({"user_id": user.id, "points": pref})
+        self.users_points_list.reverse()
 
     def test_10_best_users(self):
         self.client.force_login(self.user)
